@@ -15,10 +15,10 @@ class AuthManager {
     this.tokenFile = path.join(os.homedir(), '.yng-client', 'auth.json');
     this.offlineFile = path.join(os.homedir(), '.yng-client', 'offline.json');
     
-    // Real Microsoft OAuth2 client ID - Replace with your registered app
-    this.clientId = '61f422d3-a1d5-4c0e-8113-20f9b653f328';
+    // Use official Minecraft Launcher client ID (supports consumer accounts)
+    this.clientId = '00000000402b5328';
     this.redirectUri = 'https://login.live.com/oauth20_desktop.srf';
-    this.scope = 'XboxLive.signin offline_access';
+    this.scope = 'service::user.auth.xboxlive.com::MBI_SSL';
     
     this.currentUser = null;
     this.isOfflineMode = false;
@@ -48,7 +48,7 @@ class AuthManager {
     });
 
     return {
-      url: `https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize?${params}`,
+      url: `https://login.live.com/oauth20_authorize.srf?${params}`,
       codeVerifier,
       state
     };
@@ -120,6 +120,13 @@ class AuthManager {
           this.authWindow = null;
           reject(new Error('Authentication window was closed'));
         });
+
+        // Handle navigation errors (like invalid client ID)
+        this.authWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+          console.error(`Auth window failed to load: ${errorDescription}`);
+          this.authWindow.close();
+          reject(new Error(`Authentication failed: ${errorDescription}`));
+        });
       });
     } catch (error) {
       console.error('Login error:', error);
@@ -175,7 +182,7 @@ class AuthManager {
       code_verifier: codeVerifier
     });
 
-    const response = await this.makeRequest('POST', 'https://login.microsoftonline.com/consumers/oauth2/v2.0/token', tokenData.toString(), {
+    const response = await this.makeRequest('POST', 'https://login.live.com/oauth20_token.srf', tokenData.toString(), {
       'Content-Type': 'application/x-www-form-urlencoded'
     });
     
@@ -191,7 +198,7 @@ class AuthManager {
       Properties: {
         AuthMethod: 'RPS',
         SiteName: 'user.auth.xboxlive.com',
-        RpsTicket: `d=${accessToken}`
+        RpsTicket: accessToken
       },
       RelyingParty: 'http://auth.xboxlive.com',
       TokenType: 'JWT'
@@ -384,7 +391,15 @@ class AuthManager {
         });
 
         res.on('end', () => {
+          console.log('Response status:', res.statusCode);
+          console.log('Response data:', responseData);
+          
           try {
+            if (!responseData.trim()) {
+              reject(new Error(`Empty response from server (HTTP ${res.statusCode})`));
+              return;
+            }
+            
             const parsedData = JSON.parse(responseData);
             if (res.statusCode >= 200 && res.statusCode < 300) {
               resolve(parsedData);
@@ -392,7 +407,7 @@ class AuthManager {
               reject(new Error(`HTTP ${res.statusCode}: ${parsedData.error_description || parsedData.error || 'Unknown error'}`));
             }
           } catch (error) {
-            reject(new Error(`Failed to parse response: ${error.message}`));
+            reject(new Error(`Failed to parse response (${res.statusCode}): ${responseData.substring(0, 200)}...`));
           }
         });
       });

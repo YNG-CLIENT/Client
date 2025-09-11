@@ -72,6 +72,10 @@ class YNGClient {
     // Show window when ready
     this.mainWindow.once('ready-to-show', () => {
       this.mainWindow.show();
+      // Open dev tools to debug black screen issue
+      if (process.argv.includes('--dev')) {
+        this.mainWindow.webContents.openDevTools();
+      }
     });
 
     // Handle window closed

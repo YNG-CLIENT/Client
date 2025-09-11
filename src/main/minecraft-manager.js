@@ -21,6 +21,10 @@ class MinecraftManager {
     await fs.ensureDir(this.assetsDir);
   }
 
+  getDefaultGameDirectory() {
+    return this.minecraftDir;
+  }
+
   async getVersionManifest() {
     try {
       console.log('Fetching version manifest...');

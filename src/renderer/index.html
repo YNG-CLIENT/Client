@@ -22,7 +22,7 @@
         <nav class="sidebar">
             <div class="sidebar-header">
                 <div class="logo-container">
-                    <div class="logo-icon">🎮</div>
+                    <img src="../../assets/logo.png" alt="YNG" class="logo-image">
                     <div class="logo-text">
                         <h1>YNG Client</h1>
                         <span class="logo-subtitle">Free & Open Source</span>
@@ -38,6 +38,10 @@
                 <div class="nav-item" data-screen="versions">
                     <i class="nav-icon">📦</i>
                     <span>Versions</span>
+                </div>
+                <div class="nav-item" data-screen="downloads">
+                    <i class="nav-icon">📥</i>
+                    <span>Downloads</span>
                 </div>
                 <div class="nav-item" data-screen="settings">
                     <i class="nav-icon">⚙️</i>
@@ -175,6 +179,12 @@
                                     <span class="stat-label">Launches</span>
                                 </div>
                             </div>
+                            <div class="profile-actions">
+                                <button id="logoutBtn" class="logout-btn" title="Logout">
+                                    <span class="btn-icon">🚪</span>
+                                    Logout
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -303,6 +313,96 @@
                         <div class="loading-placeholder">
                             <div class="loading-spinner"></div>
                             <p>Loading Minecraft versions...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Downloads Screen -->
+            <div id="downloadsScreen" class="screen">
+                <div class="page-header">
+                    <h1 class="page-title">Downloads</h1>
+                    <p class="page-subtitle">Track your Minecraft version downloads and manage installed content</p>
+                </div>
+
+                <div class="downloads-container">
+                    <!-- Active Downloads -->
+                    <div class="downloads-section">
+                        <div class="section-header">
+                            <h2 class="section-title">
+                                <i class="section-icon">📥</i>
+                                Active Downloads
+                            </h2>
+                            <div class="section-stats">
+                                <span id="activeDownloadsCount">0</span> active
+                            </div>
+                        </div>
+                        <div id="activeDownloadsList" class="downloads-list">
+                            <div class="empty-state">
+                                <div class="empty-icon">📦</div>
+                                <h3>No active downloads</h3>
+                                <p>Downloads will appear here when you install Minecraft versions</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Download History -->
+                    <div class="downloads-section">
+                        <div class="section-header">
+                            <h2 class="section-title">
+                                <i class="section-icon">📋</i>
+                                Download History
+                            </h2>
+                            <div class="section-actions">
+                                <button id="clearHistoryBtn" class="btn-secondary small">Clear History</button>
+                            </div>
+                        </div>
+                        <div id="downloadHistoryList" class="downloads-list">
+                            <div class="empty-state">
+                                <div class="empty-icon">📜</div>
+                                <h3>No download history</h3>
+                                <p>Completed downloads will be listed here</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Download Stats -->
+                    <div class="downloads-section">
+                        <div class="section-header">
+                            <h2 class="section-title">
+                                <i class="section-icon">📊</i>
+                                Download Statistics
+                            </h2>
+                        </div>
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-icon">⬇️</div>
+                                <div class="stat-content">
+                                    <div class="stat-value" id="totalDownloads">0</div>
+                                    <div class="stat-label">Total Downloads</div>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon">💾</div>
+                                <div class="stat-content">
+                                    <div class="stat-value" id="totalDataDownloaded">0 MB</div>
+                                    <div class="stat-label">Data Downloaded</div>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon">⚡</div>
+                                <div class="stat-content">
+                                    <div class="stat-value" id="averageSpeed">0 MB/s</div>
+                                    <div class="stat-label">Average Speed</div>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon">✅</div>
+                                <div class="stat-content">
+                                    <div class="stat-value" id="successfulDownloads">0</div>
+                                    <div class="stat-label">Successful</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -447,10 +547,16 @@
                                         </div>
                                         <div class="slider-labels">
                                             <span>1GB</span>
-                                            <span id="defaultMemoryValue">4GB</span>
+                                            <span id="defaultMemoryValue" class="memory-value">4GB</span>
                                             <span>16GB</span>
                                         </div>
-                                        <p class="setting-desc">More memory improves performance but uses more system resources</p>
+                                        <p class="setting-desc">Recommended: 4-8GB for modern versions, 2-4GB for older versions</p>
+                                        <div class="memory-presets">
+                                            <button class="preset-btn" data-memory="2048">2GB</button>
+                                            <button class="preset-btn" data-memory="4096">4GB</button>
+                                            <button class="preset-btn" data-memory="6144">6GB</button>
+                                            <button class="preset-btn" data-memory="8192">8GB</button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -535,7 +641,7 @@
                 <div class="about-container">
                     <div class="about-hero">
                         <div class="about-logo">
-                            <div class="logo-icon large">🎮</div>
+                            <img src="../../assets/logo.png" alt="YNG" class="logo-image large">
                             <h2>YNG Client</h2>
                             <p class="version-badge">Version <span id="aboutVersion">1.0.0</span></p>
                         </div>

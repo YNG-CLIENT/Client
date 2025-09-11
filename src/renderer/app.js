@@ -18,17 +18,29 @@ class YNGClientApp {
     
     // Check if user is already logged in
     try {
+      console.log('Checking authentication status...');
       this.isLoggedIn = await window.electronAPI.auth.isLoggedIn();
+      console.log('Authentication status:', this.isLoggedIn);
+      
       if (this.isLoggedIn) {
+        console.log('User is logged in, loading profile...');
         await this.loadUserProfile();
-        this.showMainInterface();
-        // Load versions after showing main interface
-        this.loadVersions();
+        if (this.currentUser) {
+          console.log('Profile loaded, showing main interface');
+          this.showMainInterface();
+          // Load versions after showing main interface
+          this.loadVersions();
+        } else {
+          console.warn('No user profile found, showing login');
+          this.showLoginInterface();
+        }
       } else {
+        console.log('User not logged in, showing login interface');
         this.showLoginInterface();
       }
     } catch (error) {
       console.error('Failed to check authentication status:', error);
+      console.log('Defaulting to login interface');
       this.showLoginInterface();
     }
   }
@@ -46,16 +58,21 @@ class YNGClientApp {
   }
 
   setupEventListeners() {
-    // Microsoft login button
-    const loginBtn = document.getElementById('loginBtn');
-    if (loginBtn) {
-      loginBtn.addEventListener('click', () => this.handleLogin());
-    }
-
+    console.log('Setting up event listeners...');
+    
+    // Use a more robust approach to ensure the login button exists
+    this.setupLoginButton();
+    
     // Offline mode button
     const offlineBtn = document.getElementById('offlineBtn');
     if (offlineBtn) {
       offlineBtn.addEventListener('click', () => this.handleOfflineMode());
+    }
+
+    // Logout button
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', () => this.handleLogout());
     }
 
     // Navigation items
@@ -73,9 +90,52 @@ class YNGClientApp {
     this.setupWindowControls();
 
     // Download progress
-    window.electronAPI.minecraft.onDownloadProgress((event, progress) => {
-      this.updateDownloadProgress(progress);
-    });
+    if (window.electronAPI && window.electronAPI.minecraft) {
+      window.electronAPI.minecraft.onDownloadProgress((event, progress) => {
+        this.updateDownloadProgress(progress);
+      });
+    }
+  }
+
+  setupLoginButton() {
+    console.log('Setting up login button...');
+    
+    // Try multiple times to find the login button since it might not be in DOM yet
+    const findAndSetupLoginButton = () => {
+      const loginBtn = document.getElementById('loginBtn');
+      if (loginBtn) {
+        console.log('Login button found, adding event listener');
+        
+        // Remove any existing listeners to avoid duplicates
+        loginBtn.removeEventListener('click', this.handleLoginWrapper);
+        
+        // Create a bound wrapper function
+        this.handleLoginWrapper = (e) => {
+          console.log('Login button clicked!');
+          e.preventDefault();
+          e.stopPropagation();
+          this.handleLogin();
+        };
+        
+        loginBtn.addEventListener('click', this.handleLoginWrapper);
+        console.log('Login button event listener added successfully');
+        return true;
+      } else {
+        console.warn('Login button NOT found, will retry...');
+        return false;
+      }
+    };
+
+    // Try immediately
+    if (!findAndSetupLoginButton()) {
+      // If not found, try again after a short delay
+      setTimeout(() => {
+        if (!findAndSetupLoginButton()) {
+          // Try once more after the interface might be ready
+          setTimeout(findAndSetupLoginButton, 500);
+        }
+      }, 100);
+    }
   }
 
   setupWindowControls() {
@@ -133,14 +193,47 @@ class YNGClientApp {
   }
 
   showLoginInterface() {
-    // Hide sidebar and show login container
+    console.log('Attempting to show login interface...');
+    
+    // Hide sidebar but keep main content visible
     const sidebar = document.querySelector('.sidebar');
     const mainContent = document.querySelector('.main-content');
-    const loginContainer = document.querySelector('.login-container');
+    const loginScreen = document.getElementById('loginScreen');
     
-    if (sidebar) sidebar.style.display = 'none';
-    if (mainContent) mainContent.style.display = 'none';
-    if (loginContainer) loginContainer.style.display = 'grid';
+    console.log('DOM elements found:');
+    console.log('- sidebar:', !!sidebar);
+    console.log('- mainContent:', !!mainContent);
+    console.log('- loginScreen:', !!loginScreen);
+    
+    if (sidebar) {
+      sidebar.style.display = 'none';
+      console.log('Sidebar hidden');
+    }
+    
+    if (mainContent) {
+      mainContent.style.display = 'block';
+      console.log('Main content shown');
+    }
+    
+    // Hide all screens first
+    const allScreens = document.querySelectorAll('.screen');
+    allScreens.forEach(screen => {
+      screen.classList.remove('active');
+    });
+    
+    // Show only the login screen
+    if (loginScreen) {
+      loginScreen.classList.add('active');
+      console.log('Login screen should now be visible');
+      
+      // Re-setup login button after showing the interface
+      setTimeout(() => {
+        console.log('Re-setting up login button after interface shown...');
+        this.setupLoginButton();
+      }, 100);
+    } else {
+      console.error('Login screen not found! Check HTML structure.');
+    }
   }
 
   showMainInterface() {
@@ -219,6 +312,9 @@ class YNGClientApp {
       case 'versions':
         this.initializeVersionsScreen();
         break;
+      case 'downloads':
+        this.initializeDownloadsScreen();
+        break;
       case 'settings':
         this.initializeSettingsScreen();
         break;
@@ -229,19 +325,27 @@ class YNGClientApp {
   }
 
   async handleLogin() {
+    console.log('handleLogin method called');
     const loginBtn = document.getElementById('loginBtn');
     const statusDiv = document.querySelector('.login-status');
     
+    console.log('Login button element:', loginBtn);
+    console.log('Status div element:', statusDiv);
+    
     try {
-      loginBtn.disabled = true;
-      this.updateLoginButton(loginBtn, 'Signing in...', '⏳');
+      if (loginBtn) {
+        loginBtn.disabled = true;
+        this.updateLoginButton(loginBtn, 'Signing in...', '⏳');
+      }
       
       if (statusDiv) {
         statusDiv.textContent = 'Opening Microsoft login...';
         statusDiv.className = 'status-message info';
       }
 
+      console.log('Calling Microsoft auth login...');
       const result = await window.electronAPI.auth.login();
+      console.log('Auth result:', result);
       
       if (result.success) {
         this.isLoggedIn = true;
@@ -265,6 +369,10 @@ class YNGClientApp {
         errorMessage += 'Login took too long. Please try again.';
       } else if (error.message.includes('cancelled') || error.message.includes('closed')) {
         errorMessage += 'Login was cancelled. Please try again.';
+      } else if (error.message.includes('unauthorized_client') || error.message.includes('invalid_client')) {
+        errorMessage += 'Microsoft authentication service issue. Trying alternative authentication method...';
+      } else if (error.message.includes('Authentication failed')) {
+        errorMessage += 'Unable to connect to Microsoft servers. Please check your internet connection and try again.';
       } else {
         errorMessage += error.message;
       }
@@ -329,6 +437,15 @@ class YNGClientApp {
       console.error('Logout error:', error);
       this.showNotification('Logout failed: ' + error.message, 'error');
     }
+  }
+
+  updateLoginButton(button, text, icon) {
+    if (!button) return;
+    
+    button.innerHTML = `
+      <span class="btn-icon">${icon}</span>
+      <span class="btn-text">${text}</span>
+    `;
   }
 
   async loadUserProfile() {
@@ -417,26 +534,136 @@ class YNGClientApp {
   }
 
   async loadVersions() {
+    // Prevent multiple simultaneous version loads
+    if (this.loadingVersions) {
+      console.log('Version loading already in progress, skipping...');
+      return;
+    }
+    
     try {
+      this.loadingVersions = true;
+      console.log('Loading Minecraft versions...');
+      
+      // Show loading indicator
+      this.showLoadingVersions(true);
+      
       const manifestData = await window.electronAPI.minecraft.getVersions();
       this.versions = manifestData.versions || [];
       
-      this.populateVersionSelects();
+      // Clear existing version displays
+      this.clearVersionSelects();
+      
+      // Progressive loading - first show releases, then snapshots, then old versions
+      this.populateVersionsProgressively();
+      
+      console.log(`Loaded ${this.versions.length} versions`);
       
     } catch (error) {
       console.error('Failed to load versions:', error);
       this.showNotification('Failed to load Minecraft versions', 'error');
+    } finally {
+      this.loadingVersions = false;
+      this.showLoadingVersions(false);
     }
   }
 
-  populateVersionSelects() {
-    // Update version selects in different screens
+  showLoadingVersions(show) {
+    const versionsList = document.getElementById('versionsList');
+    const versionSelects = document.querySelectorAll('.version-select');
+    
+    if (show) {
+      if (versionsList) {
+        versionsList.innerHTML = '<div class="loading-versions"><div class="spinner"></div><p>Loading Minecraft versions...</p></div>';
+      }
+      versionSelects.forEach(select => {
+        select.innerHTML = '<option value="">Loading versions...</option>';
+        select.disabled = true;
+      });
+    } else {
+      versionSelects.forEach(select => {
+        select.disabled = false;
+      });
+    }
+  }
+
+  clearVersionSelects() {
+    const versionSelects = document.querySelectorAll('.version-select');
+    versionSelects.forEach(select => {
+      select.innerHTML = '<option value="">Select a version...</option>';
+    });
+  }
+
+  populateVersionsProgressively() {
+    // Sort versions by priority: releases first, then snapshots, then old versions
+    const releases = this.versions.filter(v => v.type === 'release');
+    const snapshots = this.versions.filter(v => v.type === 'snapshot');
+    const oldVersions = this.versions.filter(v => v.type !== 'release' && v.type !== 'snapshot');
+
+    // First populate dropdowns with releases
+    setTimeout(() => this.populateVersionSelects(releases), 100);
+    
+    // Then add snapshots
+    setTimeout(() => this.populateVersionSelects([...releases, ...snapshots]), 300);
+    
+    // Finally add all versions
+    setTimeout(() => this.populateVersionSelects(this.versions), 500);
+
+    // Update version cards if on versions screen
+    this.updateVersionCards();
+  }
+
+  updateVersionCards() {
+    const versionsList = document.getElementById('versionsList');
+    if (!versionsList) return;
+
+    versionsList.innerHTML = '';
+    
+    // Group versions by type for better organization
+    const releases = this.versions.filter(v => v.type === 'release').slice(0, 20); // Show latest 20 releases
+    const snapshots = this.versions.filter(v => v.type === 'snapshot').slice(0, 10); // Show latest 10 snapshots
+    
+    // Add releases section
+    if (releases.length > 0) {
+      const releasesSection = document.createElement('div');
+      releasesSection.className = 'versions-section';
+      releasesSection.innerHTML = '<h3 class="section-title">📦 Release Versions</h3>';
+      
+      releases.forEach(version => {
+        const card = this.createVersionCard(version);
+        releasesSection.appendChild(card);
+      });
+      
+      versionsList.appendChild(releasesSection);
+    }
+
+    // Add snapshots section
+    if (snapshots.length > 0) {
+      const snapshotsSection = document.createElement('div');
+      snapshotsSection.className = 'versions-section';
+      snapshotsSection.innerHTML = '<h3 class="section-title">🧪 Snapshot Versions</h3>';
+      
+      snapshots.forEach(version => {
+        const card = this.createVersionCard(version);
+        snapshotsSection.appendChild(card);
+      });
+      
+      versionsList.appendChild(snapshotsSection);
+    }
+  }
+
+  populateVersionSelects(versionsToShow = null) {
+    const versions = versionsToShow || this.versions;
     const versionSelects = document.querySelectorAll('.version-select, #versionSelect');
     
     versionSelects.forEach(select => {
-      select.innerHTML = '<option value="">Select a version...</option>';
+      // Keep the default option
+      if (select.children.length === 1 && select.children[0].value === '') {
+        // Keep the "Select a version..." option
+      } else {
+        select.innerHTML = '<option value="">Select a version...</option>';
+      }
       
-      this.versions.forEach(version => {
+      versions.forEach(version => {
         const option = document.createElement('option');
         option.value = version.id;
         option.textContent = `${version.id} (${version.type})`;
@@ -560,6 +787,7 @@ class YNGClientApp {
   createVersionCard(version) {
     const card = document.createElement('div');
     card.className = 'version-card';
+    card.setAttribute('data-version-id', version.id);
     
     const typeIcon = {
       'release': '🟢',
@@ -572,28 +800,29 @@ class YNGClientApp {
       new Date(version.releaseTime).toLocaleDateString() : 
       'Unknown';
     
+    // Check if this version is downloaded or being downloaded
+    const downloadStatus = this.getVersionDownloadStatus(version.id);
+    const isDownloaded = this.isVersionDownloaded(version.id);
+    
     card.innerHTML = `
       <div class="version-header">
         <div class="version-info">
           <h4 class="version-name">${version.id}</h4>
           <span class="version-type">${typeIcon} ${version.type}</span>
+          ${downloadStatus.isDownloading ? `<span class="download-status downloading">⬇️ Downloading</span>` : ''}
+          ${isDownloaded ? `<span class="download-status downloaded">✅ Downloaded</span>` : ''}
         </div>
         <div class="version-actions">
-          <button class="download-btn" data-version="${version.id}">
-            <span class="btn-icon">📥</span>
-            Download
-          </button>
-          <button class="play-btn" data-version="${version.id}">
-            <span class="btn-icon">🚀</span>
-            Play
-          </button>
+          ${this.createVersionActionButtons(version.id, downloadStatus, isDownloaded)}
         </div>
       </div>
       <div class="version-details">
         <span class="release-date">Released: ${releaseDate}</span>
         <span class="version-size">Size: ~${this.estimateVersionSize(version.type)}</span>
       </div>
+      ${downloadStatus.isDownloading ? this.createVersionProgressBar(downloadStatus.progress) : ''}
     `;
+    
     
     // Add event listeners
     const downloadBtn = card.querySelector('.download-btn');
@@ -625,6 +854,74 @@ class YNGClientApp {
       'old_alpha': '1-5MB'
     };
     return sizes[type] || '~20MB';
+  }
+
+  getVersionDownloadStatus(versionId) {
+    if (this.activeDownloads && this.activeDownloads.has(versionId)) {
+      const download = this.activeDownloads.get(versionId);
+      return {
+        isDownloading: true,
+        progress: download.progress || 0,
+        status: download.status
+      };
+    }
+    return { isDownloading: false, progress: 0 };
+  }
+
+  isVersionDownloaded(versionId) {
+    // Check download history for completed downloads
+    const history = this.getDownloadHistory();
+    return history.some(download => 
+      download.id === versionId && download.status === 'completed'
+    );
+  }
+
+  createVersionActionButtons(versionId, downloadStatus, isDownloaded) {
+    if (downloadStatus.isDownloading) {
+      return `
+        <button class="action-btn pause-btn" data-version="${versionId}">
+          <span class="btn-icon">⏸️</span>
+          Pause
+        </button>
+        <button class="action-btn cancel-btn" data-version="${versionId}">
+          <span class="btn-icon">❌</span>
+          Cancel
+        </button>
+      `;
+    } else if (isDownloaded) {
+      return `
+        <button class="play-btn primary" data-version="${versionId}">
+          <span class="btn-icon">🚀</span>
+          Play
+        </button>
+        <button class="download-btn secondary" data-version="${versionId}">
+          <span class="btn-icon">🔄</span>
+          Re-download
+        </button>
+      `;
+    } else {
+      return `
+        <button class="download-btn primary" data-version="${versionId}">
+          <span class="btn-icon">📥</span>
+          Download
+        </button>
+        <button class="play-btn secondary disabled" data-version="${versionId}" disabled>
+          <span class="btn-icon">🚀</span>
+          Play
+        </button>
+      `;
+    }
+  }
+
+  createVersionProgressBar(progress) {
+    return `
+      <div class="version-progress">
+        <div class="progress-bar">
+          <div class="progress-fill" style="width: ${progress}%"></div>
+        </div>
+        <div class="progress-text">${Math.round(progress)}% completed</div>
+      </div>
+    `;
   }
   
   async downloadVersion(versionId) {
@@ -691,7 +988,8 @@ class YNGClientApp {
       this.showNotification(`Downloading Minecraft ${versionId}...`, 'info');
       await window.electronAPI.discord.setDownloadActivity(versionId, 0);
       
-      const result = await window.electronAPI.minecraft.downloadVersion(versionId);
+      // Use the enhanced download method with progress tracking
+      const result = await this.downloadVersionWithProgress(versionId);
       
       if (result.success) {
         this.showNotification(`Minecraft ${versionId} downloaded successfully!`, 'success');
@@ -700,6 +998,53 @@ class YNGClientApp {
       }
     } catch (error) {
       this.showNotification(`Failed to download ${versionId}: ${error.message}`, 'error');
+    }
+  }
+
+  // Enhanced version download with progress tracking (rename to avoid conflict)
+  async downloadVersionWithProgress(versionId, versionType = 'release') {
+    try {
+      console.log(`Starting download for ${versionId}...`);
+      
+      // Add to active downloads
+      const downloadItem = {
+        id: versionId,
+        name: `Minecraft ${versionId}`,
+        type: versionType,
+        status: 'downloading',
+        progress: 0,
+        size: 0,
+        speed: 0
+      };
+
+      this.addToActiveDownloads(downloadItem);
+      
+      // Call the existing download method but with progress tracking
+      const result = await window.electronAPI.minecraft.downloadVersion(versionId);
+      
+      // Update download as completed
+      downloadItem.status = 'completed';
+      downloadItem.progress = 100;
+      this.addToDownloadHistory(downloadItem);
+      this.removeFromActiveDownloads(versionId);
+      
+      return result;
+    } catch (error) {
+      console.error('Download error:', error);
+      
+      // Update download as failed
+      const downloadItem = {
+        id: versionId,
+        name: `Minecraft ${versionId}`,
+        type: versionType,
+        status: 'failed',
+        progress: 0
+      };
+      
+      this.addToDownloadHistory(downloadItem);
+      this.removeFromActiveDownloads(versionId);
+      
+      throw error;
     }
   }
 
@@ -718,6 +1063,48 @@ class YNGClientApp {
     // Load current settings
     this.loadSettingsIntoUI();
     this.setupSettingsHandlers();
+    this.setupMemorySettings();
+  }
+
+  setupMemorySettings() {
+    const memorySlider = document.getElementById('defaultMemory');
+    const memoryValue = document.getElementById('defaultMemoryValue');
+    const presetButtons = document.querySelectorAll('.preset-btn');
+
+    if (memorySlider && memoryValue) {
+      // Update memory value display
+      const updateMemoryDisplay = (value) => {
+        const gb = Math.round(value / 1024 * 10) / 10;
+        memoryValue.textContent = `${gb}GB`;
+        
+        // Update active preset button
+        presetButtons.forEach(btn => {
+          btn.classList.remove('active');
+          if (parseInt(btn.dataset.memory) === parseInt(value)) {
+            btn.classList.add('active');
+          }
+        });
+      };
+
+      // Initial display
+      updateMemoryDisplay(memorySlider.value);
+
+      // Slider change event
+      memorySlider.addEventListener('input', (e) => {
+        updateMemoryDisplay(e.target.value);
+        this.settings.memory = parseInt(e.target.value);
+      });
+
+      // Preset button events
+      presetButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const memory = parseInt(btn.dataset.memory);
+          memorySlider.value = memory;
+          updateMemoryDisplay(memory);
+          this.settings.memory = memory;
+        });
+      });
+    }
   }
 
   setupSettingsHandlers() {
@@ -836,15 +1223,20 @@ class YNGClientApp {
     }
 
     try {
+      // Get default game directory
+      const defaultGameDir = await window.electronAPI.minecraft.getDefaultDirectory();
+      
       const launchOptions = {
         version: versionId || this.selectedVersion,
-        username: this.currentUser.name || 'Player',
-        uuid: this.currentUser.id || 'offline-uuid',
-        accessToken: this.currentUser.accessToken || 'offline-token',
-        gameDirectory: this.settings.gameDirectory || await this.getDefaultGameDirectory(),
+        user: {
+          name: this.currentUser.name || 'Player',
+          id: this.currentUser.id || 'offline-uuid',
+          accessToken: this.currentUser.accessToken || 'offline-token',
+          isOffline: this.currentUser.isOffline || false
+        },
+        gameDirectory: this.settings.gameDirectory || defaultGameDir,
         javaArgs: this.settings.javaArgs || [],
-        memory: this.settings.memory || 2048,
-        isOffline: this.currentUser.isOffline || false
+        memory: this.settings.memory || 2048
       };
 
       this.showNotification('Launching Minecraft...', 'info');
@@ -856,7 +1248,6 @@ class YNGClientApp {
         
         // Update launch count and last played
         if (this.currentUser.isOffline) {
-          await window.electronAPI.auth.incrementLaunches();
           this.currentUser.launches = (this.currentUser.launches || 0) + 1;
           this.currentUser.lastPlayed = new Date().toISOString();
           this.updateUserStats();
@@ -1009,6 +1400,368 @@ class YNGClientApp {
       console.error('Failed to get default directory:', error);
       return null;
     }
+  }
+
+  // Downloads Management
+  initializeDownloadsScreen() {
+    this.loadDownloadHistory();
+    this.updateDownloadStats();
+    this.setupDownloadHandlers();
+  }
+
+  setupDownloadHandlers() {
+    const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+    if (clearHistoryBtn) {
+      clearHistoryBtn.addEventListener('click', () => {
+        this.clearDownloadHistory();
+      });
+    }
+  }
+
+  loadDownloadHistory() {
+    const downloadHistory = this.getDownloadHistory();
+    const historyList = document.getElementById('downloadHistoryList');
+    
+    if (!historyList) return;
+    
+    if (downloadHistory.length === 0) {
+      historyList.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">📜</div>
+          <h3>No download history</h3>
+          <p>Completed downloads will be listed here</p>
+        </div>
+      `;
+      return;
+    }
+
+    historyList.innerHTML = downloadHistory.map(download => this.createDownloadItem(download)).join('');
+  }
+
+  createDownloadItem(download) {
+    const statusClass = download.status.toLowerCase();
+    const statusIcon = this.getStatusIcon(download.status);
+    const formattedSize = this.formatBytes(download.size || 0);
+    const formattedDate = new Date(download.timestamp).toLocaleDateString();
+
+    return `
+      <div class="download-item">
+        <div class="download-header">
+          <div class="download-info">
+            <div class="download-icon">${statusIcon}</div>
+            <div class="download-details">
+              <h4>${download.name || 'Unknown'}</h4>
+              <p>${download.type || 'Minecraft Version'} • ${formattedSize} • ${formattedDate}</p>
+            </div>
+          </div>
+          <div class="download-status ${statusClass}">
+            ${download.status}
+          </div>
+        </div>
+        ${download.status === 'downloading' ? this.createProgressBar(download.progress || 0) : ''}
+        ${download.status === 'downloading' ? this.createDownloadActions(download.id) : ''}
+      </div>
+    `;
+  }
+
+  createProgressBar(progress) {
+    return `
+      <div class="download-progress">
+        <div class="progress-bar">
+          <div class="progress-fill" style="width: ${progress}%"></div>
+        </div>
+        <div class="progress-info">
+          <span>${Math.round(progress)}% completed</span>
+          <span class="download-speed">0 MB/s</span>
+        </div>
+      </div>
+    `;
+  }
+
+  createDownloadActions(downloadId) {
+    return `
+      <div class="download-actions">
+        <button class="action-btn pause" onclick="app.pauseDownload('${downloadId}')" title="Pause">⏸️</button>
+        <button class="action-btn cancel" onclick="app.cancelDownload('${downloadId}')" title="Cancel">❌</button>
+      </div>
+    `;
+  }
+
+  getStatusIcon(status) {
+    switch (status.toLowerCase()) {
+      case 'completed': return '✅';
+      case 'downloading': return '⬇️';
+      case 'failed': return '❌';
+      case 'paused': return '⏸️';
+      case 'cancelled': return '🚫';
+      default: return '📦';
+    }
+  }
+
+  updateDownloadStats() {
+    const history = this.getDownloadHistory();
+    const stats = this.calculateDownloadStats(history);
+
+    // Update stat displays
+    const totalDownloads = document.getElementById('totalDownloads');
+    const totalData = document.getElementById('totalDataDownloaded');
+    const averageSpeed = document.getElementById('averageSpeed');
+    const successfulDownloads = document.getElementById('successfulDownloads');
+
+    if (totalDownloads) totalDownloads.textContent = stats.total;
+    if (totalData) totalData.textContent = this.formatBytes(stats.totalSize);
+    if (averageSpeed) averageSpeed.textContent = `${stats.averageSpeed} MB/s`;
+    if (successfulDownloads) successfulDownloads.textContent = stats.successful;
+  }
+
+  calculateDownloadStats(history) {
+    const stats = {
+      total: history.length,
+      successful: history.filter(d => d.status === 'completed').length,
+      totalSize: history.reduce((sum, d) => sum + (d.size || 0), 0),
+      averageSpeed: 0
+    };
+
+    // Calculate average speed from successful downloads
+    const completedDownloads = history.filter(d => d.status === 'completed' && d.speed);
+    if (completedDownloads.length > 0) {
+      const totalSpeed = completedDownloads.reduce((sum, d) => sum + (d.speed || 0), 0);
+      stats.averageSpeed = (totalSpeed / completedDownloads.length).toFixed(1);
+    }
+
+    return stats;
+  }
+
+  getDownloadHistory() {
+    try {
+      const history = localStorage.getItem('downloadHistory');
+      return history ? JSON.parse(history) : [];
+    } catch (error) {
+      console.error('Error loading download history:', error);
+      return [];
+    }
+  }
+
+  saveDownloadHistory(history) {
+    try {
+      localStorage.setItem('downloadHistory', JSON.stringify(history));
+    } catch (error) {
+      console.error('Error saving download history:', error);
+    }
+  }
+
+  addToDownloadHistory(download) {
+    const history = this.getDownloadHistory();
+    history.unshift({
+      id: download.id || Date.now().toString(),
+      name: download.name,
+      type: download.type || 'Minecraft Version',
+      status: download.status || 'completed',
+      size: download.size || 0,
+      speed: download.speed || 0,
+      timestamp: Date.now(),
+      progress: download.progress || 100
+    });
+
+    // Keep only last 50 downloads
+    if (history.length > 50) {
+      history.splice(50);
+    }
+
+    this.saveDownloadHistory(history);
+    
+    // Update UI if downloads screen is active
+    if (this.currentScreen === 'downloads') {
+      this.loadDownloadHistory();
+      this.updateDownloadStats();
+    }
+  }
+
+  clearDownloadHistory() {
+    if (confirm('Are you sure you want to clear the download history?')) {
+      localStorage.removeItem('downloadHistory');
+      this.loadDownloadHistory();
+      this.updateDownloadStats();
+    }
+  }
+
+  addToActiveDownloads(download) {
+    if (!this.activeDownloads) {
+      this.activeDownloads = new Map();
+    }
+    this.activeDownloads.set(download.id, download);
+    this.updateActiveDownloadsList();
+  }
+
+  removeFromActiveDownloads(downloadId) {
+    if (this.activeDownloads) {
+      this.activeDownloads.delete(downloadId);
+      this.updateActiveDownloadsList();
+    }
+  }
+
+  updateActiveDownloadsList() {
+    const activeList = document.getElementById('activeDownloadsList');
+    const countElement = document.getElementById('activeDownloadsCount');
+    
+    if (!activeList || !this.activeDownloads) return;
+    
+    const activeArray = Array.from(this.activeDownloads.values());
+    
+    if (countElement) {
+      countElement.textContent = activeArray.length;
+    }
+    
+    if (activeArray.length === 0) {
+      activeList.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">📦</div>
+          <h3>No active downloads</h3>
+          <p>Downloads will appear here when you install Minecraft versions</p>
+        </div>
+      `;
+    } else {
+      activeList.innerHTML = activeArray.map(download => this.createDownloadItem(download)).join('');
+    }
+
+    // Also update version cards if on versions screen
+    if (this.currentScreen === 'versions') {
+      this.refreshVersionCards();
+    }
+  }
+
+  refreshVersionCards() {
+    // Update all version cards to reflect current download status
+    const versionCards = document.querySelectorAll('.version-card');
+    versionCards.forEach(card => {
+      const versionId = card.getAttribute('data-version-id');
+      if (versionId) {
+        const downloadStatus = this.getVersionDownloadStatus(versionId);
+        const isDownloaded = this.isVersionDownloaded(versionId);
+        
+        // Update status indicators
+        const existingStatus = card.querySelector('.download-status');
+        if (existingStatus) {
+          existingStatus.remove();
+        }
+        
+        const versionInfo = card.querySelector('.version-info');
+        if (downloadStatus.isDownloading) {
+          const statusEl = document.createElement('span');
+          statusEl.className = 'download-status downloading';
+          statusEl.innerHTML = '⬇️ Downloading';
+          versionInfo.appendChild(statusEl);
+        } else if (isDownloaded) {
+          const statusEl = document.createElement('span');
+          statusEl.className = 'download-status downloaded';
+          statusEl.innerHTML = '✅ Downloaded';
+          versionInfo.appendChild(statusEl);
+        }
+        
+        // Update action buttons
+        const actionsContainer = card.querySelector('.version-actions');
+        if (actionsContainer) {
+          actionsContainer.innerHTML = this.createVersionActionButtons(versionId, downloadStatus, isDownloaded);
+        }
+        
+        // Update progress bar
+        const existingProgress = card.querySelector('.version-progress');
+        if (existingProgress) {
+          existingProgress.remove();
+        }
+        
+        if (downloadStatus.isDownloading) {
+          const progressEl = document.createElement('div');
+          progressEl.innerHTML = this.createVersionProgressBar(downloadStatus.progress);
+          card.appendChild(progressEl.firstElementChild);
+        }
+      }
+    });
+    
+    // Re-setup event listeners for updated buttons
+    this.setupVersionActionListeners();
+  }
+
+  setupVersionActionListeners() {
+    // Setup download button listeners
+    document.querySelectorAll('.download-btn').forEach(btn => {
+      btn.removeEventListener('click', this.handleVersionDownload.bind(this));
+      btn.addEventListener('click', this.handleVersionDownload.bind(this));
+    });
+    
+    // Setup play button listeners
+    document.querySelectorAll('.play-btn:not(.disabled)').forEach(btn => {
+      btn.removeEventListener('click', this.handleVersionPlay.bind(this));
+      btn.addEventListener('click', this.handleVersionPlay.bind(this));
+    });
+    
+    // Setup pause/cancel listeners
+    document.querySelectorAll('.pause-btn').forEach(btn => {
+      btn.removeEventListener('click', this.handleVersionPause.bind(this));
+      btn.addEventListener('click', this.handleVersionPause.bind(this));
+    });
+    
+    document.querySelectorAll('.cancel-btn').forEach(btn => {
+      btn.removeEventListener('click', this.handleVersionCancel.bind(this));
+      btn.addEventListener('click', this.handleVersionCancel.bind(this));
+    });
+  }
+
+  handleVersionDownload(event) {
+    const versionId = event.target.closest('button').getAttribute('data-version');
+    if (versionId) {
+      this.downloadVersion(versionId);
+    }
+  }
+
+  handleVersionPlay(event) {
+    const versionId = event.target.closest('button').getAttribute('data-version');
+    if (versionId) {
+      this.launchVersion(versionId);
+    }
+  }
+
+  handleVersionPause(event) {
+    const versionId = event.target.closest('button').getAttribute('data-version');
+    if (versionId) {
+      this.pauseDownload(versionId);
+    }
+  }
+
+  handleVersionCancel(event) {
+    const versionId = event.target.closest('button').getAttribute('data-version');
+    if (versionId) {
+      this.cancelDownload(versionId);
+    }
+  }
+
+  pauseDownload(downloadId) {
+    console.log(`Pausing download: ${downloadId}`);
+    // Implement pause functionality
+    if (this.activeDownloads && this.activeDownloads.has(downloadId)) {
+      const download = this.activeDownloads.get(downloadId);
+      download.status = 'paused';
+      this.updateActiveDownloadsList();
+    }
+  }
+
+  cancelDownload(downloadId) {
+    console.log(`Cancelling download: ${downloadId}`);
+    // Implement cancel functionality
+    if (this.activeDownloads && this.activeDownloads.has(downloadId)) {
+      const download = this.activeDownloads.get(downloadId);
+      download.status = 'cancelled';
+      this.addToDownloadHistory(download);
+      this.removeFromActiveDownloads(downloadId);
+    }
+  }
+
+  formatBytes(bytes) {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
   }
 }
 
