@@ -1,0 +1,108 @@
+{
+  "name": "yng-client",
+  "version": "1.0.0",
+  "description": "A open source Minecraft launcher",
+  "main": "src/main.js",
+  "homepage": ".",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build": "electron-builder",
+    "build:windows": "electron-builder --windows",
+    "build:linux": "electron-builder --linux",
+    "build:mac": "electron-builder --mac",
+    "build-win": "electron-builder --win",
+    "build-mac": "electron-builder --mac",
+    "build-linux": "electron-builder --linux",
+    "postinstall": "electron-builder install-app-deps",
+    "test": "echo \"No tests specified\" && exit 0",
+    "lint": "echo \"No linting configured\" && exit 0"
+  },
+  "keywords": [
+    "minecraft",
+    "launcher",
+    "electron",
+    "gaming"
+  ],
+  "author": "YNG Client Team",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^27.0.0",
+    "electron-builder": "^24.6.4"
+  },
+  "dependencies": {
+    "axios": "^1.5.0",
+    "child_process": "^1.0.2",
+    "crypto": "^1.0.1",
+    "discord-rpc": "^4.0.1",
+    "electron-updater": "^6.1.4",
+    "fs-extra": "^11.1.1",
+    "os": "^0.1.2",
+    "path": "^0.12.7",
+    "uuid": "^9.0.1"
+  },
+  "build": {
+    "appId": "com.yngclient.launcher",
+    "productName": "YNG Client",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
+      "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+      "requestedExecutionLevel": "asInvoker"
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": ["x64"]
+        },
+        {
+          "target": "deb",
+          "arch": ["x64"]
+        }
+      ],
+      "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+      "category": "Game"
+    },
+    "mac": {
+      "category": "public.app-category.games",
+      "target": "dmg"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "artifactName": "${productName}-${version}-Setup.${ext}"
+    },
+    "portable": {
+      "artifactName": "${productName}-${version}-Portable.${ext}"
+    },
+    "extraMetadata": {
+      "name": "yng-client"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "yngclient",
+      "repo": "yng-client"
+    }
+  }
+}

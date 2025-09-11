@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YNG Client - Free Open Source Minecraft Launcher</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Animated Background -->
+        <div class="animated-bg">
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+        </div>
+
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-container">
+                    <div class="logo-icon">🎮</div>
+                    <div class="logo-text">
+                        <h1>YNG Client</h1>
+                        <span class="logo-subtitle">Free & Open Source</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="nav-menu">
+                <div class="nav-item active" data-screen="home">
+                    <i class="nav-icon">🏠</i>
+                    <span>Home</span>
+                </div>
+                <div class="nav-item" data-screen="versions">
+                    <i class="nav-icon">📦</i>
+                    <span>Versions</span>
+                </div>
+                <div class="nav-item" data-screen="settings">
+                    <i class="nav-icon">⚙️</i>
+                    <span>Settings</span>
+                </div>
+                <div class="nav-item" data-screen="about">
+                    <i class="nav-icon">ℹ️</i>
+                    <span>About</span>
+                </div>
+            </div>
+
+            <div class="sidebar-footer">
+                <div class="platform-support">
+                    <div class="platform-item supported" title="Linux Support">🐧</div>
+                    <div class="platform-item supported" title="Windows Support">🪟</div>
+                    <div class="platform-item future" title="macOS (Maybe in Future)">🍎</div>
+                </div>
+                <div class="version-info">
+                    <span id="appVersion">v1.0.0</span>
+                    <div id="updateIndicator" class="update-dot hidden"></div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Login Screen -->
+            <div id="loginScreen" class="screen active">
+                <div class="login-container">
+                    <div class="login-hero">
+                        <div class="hero-graphic">
+                            <div class="minecraft-blocks">
+                                <div class="block grass"></div>
+                                <div class="block stone"></div>
+                                <div class="block diamond"></div>
+                            </div>
+                        </div>
+                        <div class="hero-content">
+                            <h1 class="hero-title">Welcome to YNG Client</h1>
+                            <p class="hero-subtitle">The Free & Open Source Minecraft Launcher</p>
+                            <div class="feature-list">
+                                <div class="feature-item">✨ Modern & Fast Interface</div>
+                                <div class="feature-item">🔒 Secure Microsoft Authentication</div>
+                                <div class="feature-item">🚀 Lightning Fast Downloads</div>
+                                <div class="feature-item">🎮 Multiple Version Support</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="login-card">
+                        <div class="card-header">
+                            <h2>Get Started</h2>
+                            <p>Sign in with your Microsoft account to access Minecraft</p>
+                        </div>
+                        
+                        <div class="login-form">
+                            <button id="loginBtn" class="primary-btn login-btn">
+                                <div class="btn-content">
+                                    <div class="btn-icon">🔐</div>
+                                    <div class="btn-text">
+                                        <span class="btn-title">Sign in with Microsoft</span>
+                                        <span class="btn-subtitle">Secure OAuth2 Authentication</span>
+                                    </div>
+                                </div>
+                            </button>
+                            
+                            <div class="login-options">
+                                <div class="divider">
+                                    <span>or</span>
+                                </div>
+                                
+                                <div class="offline-section">
+                                    <input 
+                                        type="text" 
+                                        id="offlineUsername" 
+                                        class="form-input" 
+                                        placeholder="Enter username for offline mode"
+                                        maxlength="16"
+                                        style="margin-bottom: 12px;"
+                                    >
+                                    <button id="offlineBtn" class="secondary-btn">
+                                        <span class="btn-icon">📱</span>
+                                        Play Offline
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="loginStatus" class="status-message"></div>
+                        
+                        <div class="login-footer">
+                            <div class="security-notice">
+                                <i>🔒</i>
+                                <span>Your credentials are never stored by YNG Client</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Home Screen -->
+            <div id="homeScreen" class="screen">
+                <div class="page-header">
+                    <div class="header-content">
+                        <h1 class="page-title">Welcome back!</h1>
+                        <p class="page-subtitle">Ready to jump into Minecraft?</p>
+                    </div>
+                    <div class="header-actions">
+                        <button id="logoutBtn" class="icon-btn logout-btn" title="Logout">
+                            <span>🚪</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- User Profile Section -->
+                <div class="user-profile-section">
+                    <div class="profile-card">
+                        <div class="profile-avatar">
+                            <div id="userSkin" class="skin-container">
+                                <img id="skinImage" src="" alt="User Skin" class="skin-image">
+                                <div class="skin-overlay"></div>
+                            </div>
+                            <div class="online-indicator"></div>
+                        </div>
+                        <div class="profile-info">
+                            <h2 id="username" class="profile-name">Loading...</h2>
+                            <p class="profile-status">Minecraft Player</p>
+                            <div class="profile-stats">
+                                <div class="stat-item">
+                                    <span class="stat-value" id="playTime">0h</span>
+                                    <span class="stat-label">Play Time</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-value" id="launchCount">0</span>
+                                    <span class="stat-label">Launches</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Launch Section -->
+                <div class="quick-launch-section">
+                    <div class="section-header">
+                        <h3>Quick Launch</h3>
+                        <button id="refreshVersions" class="icon-btn" title="Refresh Versions">
+                            <span>🔄</span>
+                        </button>
+                    </div>
+                    
+                    <div class="launch-grid">
+                        <div class="launch-card">
+                            <div class="card-content">
+                                <div class="version-selector-wrapper">
+                                    <select id="versionSelect" class="version-dropdown">
+                                        <option value="">Loading versions...</option>
+                                    </select>
+                                    <div class="dropdown-icon">⌄</div>
+                                </div>
+                                
+                                <div class="version-filters">
+                                    <label class="filter-toggle">
+                                        <input type="checkbox" id="showSnapshots">
+                                        <span class="toggle-slider"></span>
+                                        <span class="toggle-label">Snapshots</span>
+                                    </label>
+                                    <label class="filter-toggle">
+                                        <input type="checkbox" id="showBetas">
+                                        <span class="toggle-slider"></span>
+                                        <span class="toggle-label">Beta/Alpha</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="launch-card">
+                            <div class="card-content">
+                                <div class="memory-settings">
+                                    <label class="setting-label">
+                                        Memory Allocation
+                                        <span class="memory-value" id="memoryValue">4096 MB</span>
+                                    </label>
+                                    <div class="slider-container">
+                                        <input type="range" id="memorySlider" min="1024" max="16384" step="512" value="4096" class="memory-slider">
+                                        <div class="slider-track"></div>
+                                    </div>
+                                    <div class="slider-labels">
+                                        <span>1GB</span>
+                                        <span>16GB</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="launch-button-container">
+                        <button id="launchBtn" class="launch-btn" disabled>
+                            <div class="btn-content">
+                                <div class="btn-icon">🚀</div>
+                                <div class="btn-text">
+                                    <span class="btn-title" id="launchText">Select Version to Play</span>
+                                    <span class="btn-subtitle">Click to launch Minecraft</span>
+                                </div>
+                            </div>
+                            <div class="btn-glow"></div>
+                        </button>
+                    </div>
+                    
+                    <div id="launchStatus" class="status-message"></div>
+                    <div id="downloadProgress" class="progress-container hidden">
+                        <div class="progress-header">
+                            <span id="progressText">Downloading...</span>
+                            <span id="progressPercentage">0%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div id="progressFill" class="progress-fill"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Versions Screen -->
+            <div id="versionsScreen" class="screen">
+                <div class="page-header">
+                    <div class="header-content">
+                        <h1 class="page-title">Version Manager</h1>
+                        <p class="page-subtitle">Download and manage Minecraft versions</p>
+                    </div>
+                    <div class="header-actions">
+                        <button id="refreshVersionsList" class="primary-btn">
+                            <span class="btn-icon">🔄</span>
+                            Refresh
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="versions-container">
+                    <div class="version-filters">
+                        <div class="filter-group">
+                            <label class="checkbox-container">
+                                <input type="checkbox" id="showReleasesFilter" class="checkbox" checked>
+                                <span class="checkmark"></span>
+                                <span>Releases</span>
+                            </label>
+                            <label class="checkbox-container">
+                                <input type="checkbox" id="showSnapshotsFilter" class="checkbox">
+                                <span class="checkmark"></span>
+                                <span>Snapshots</span>
+                            </label>
+                            <label class="checkbox-container">
+                                <input type="checkbox" id="showBetasFilter" class="checkbox">
+                                <span class="checkmark"></span>
+                                <span>Beta/Alpha</span>
+                            </label>
+                        </div>
+                        <div class="search-group">
+                            <input type="text" id="versionSearch" class="search-input" placeholder="Search versions...">
+                        </div>
+                    </div>
+                    
+                    <div id="versionsList" class="versions-grid">
+                        <!-- Versions will be populated here -->
+                        <div class="loading-placeholder">
+                            <div class="loading-spinner"></div>
+                            <p>Loading Minecraft versions...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings Screen -->
+            <div id="settingsScreen" class="screen">
+                <div class="page-header">
+                    <h1 class="page-title">Settings</h1>
+                    <p class="page-subtitle">Customize your Minecraft experience</p>
+                </div>
+
+                <div class="settings-container">
+                    <div class="settings-sidebar">
+                        <div class="settings-nav">
+                            <div class="settings-nav-item active" data-section="general">
+                                <i>⚙️</i>
+                                <span>General</span>
+                            </div>
+                            <div class="settings-nav-item" data-section="game">
+                                <i>🎮</i>
+                                <span>Game</span>
+                            </div>
+                            <div class="settings-nav-item" data-section="performance">
+                                <i>⚡</i>
+                                <span>Performance</span>
+                            </div>
+                            <div class="settings-nav-item" data-section="advanced">
+                                <i>🔧</i>
+                                <span>Advanced</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="settings-content">
+                        <div class="settings-section active" data-section="general">
+                            <h3>General Settings</h3>
+                            
+                            <div class="setting-group">
+                                <h4>Launcher Behavior</h4>
+                                <div class="setting-item">
+                                    <label class="setting-toggle">
+                                        <input type="checkbox" id="autoUpdate">
+                                        <span class="toggle-slider"></span>
+                                        <div class="setting-info">
+                                            <span class="setting-title">Auto-update launcher</span>
+                                            <span class="setting-desc">Automatically download and install launcher updates</span>
+                                        </div>
+                                    </label>
+                                </div>
+                                <div class="setting-item">
+                                    <label class="setting-toggle">
+                                        <input type="checkbox" id="closeAfterLaunch">
+                                        <span class="toggle-slider"></span>
+                                        <div class="setting-info">
+                                            <span class="setting-title">Close launcher after game starts</span>
+                                            <span class="setting-desc">Minimize system resource usage while playing</span>
+                                        </div>
+                                    </label>
+                                </div>
+                                <div class="setting-item">
+                                    <label class="setting-toggle">
+                                        <input type="checkbox" id="minimizeToTray">
+                                        <span class="toggle-slider"></span>
+                                        <div class="setting-info">
+                                            <span class="setting-title">Minimize to system tray</span>
+                                            <span class="setting-desc">Keep launcher running in background</span>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="setting-group">
+                                <h4>Game Directory</h4>
+                                <div class="setting-item">
+                                    <div class="directory-setting">
+                                        <label class="setting-label">Minecraft Directory</label>
+                                        <div class="directory-selector">
+                                            <input type="text" id="gameDirectory" class="directory-input" readonly>
+                                            <button id="selectDirectory" class="directory-btn">Browse</button>
+                                        </div>
+                                        <p class="setting-desc">Choose where Minecraft files are stored</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="settings-section" data-section="game">
+                            <h3>Game Settings</h3>
+                            
+                            <div class="setting-group">
+                                <h4>Launch Options</h4>
+                                <div class="setting-item">
+                                    <label class="setting-toggle">
+                                        <input type="checkbox" id="enableConsole">
+                                        <span class="toggle-slider"></span>
+                                        <div class="setting-info">
+                                            <span class="setting-title">Show game console</span>
+                                            <span class="setting-desc">Display the Minecraft console window for debugging</span>
+                                        </div>
+                                    </label>
+                                </div>
+                                <div class="setting-item">
+                                    <label class="setting-toggle">
+                                        <input type="checkbox" id="fullscreen">
+                                        <span class="toggle-slider"></span>
+                                        <div class="setting-info">
+                                            <span class="setting-title">Start in fullscreen</span>
+                                            <span class="setting-desc">Launch Minecraft in fullscreen mode</span>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="setting-group">
+                                <h4>Window Settings</h4>
+                                <div class="setting-item">
+                                    <div class="resolution-setting">
+                                        <label class="setting-label">Game Resolution</label>
+                                        <div class="resolution-inputs">
+                                            <input type="number" id="windowWidth" placeholder="1920" min="640" max="7680">
+                                            <span>×</span>
+                                            <input type="number" id="windowHeight" placeholder="1080" min="480" max="4320">
+                                        </div>
+                                        <p class="setting-desc">Set custom window size (leave empty for default)</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="settings-section" data-section="performance">
+                            <h3>Performance Settings</h3>
+                            
+                            <div class="setting-group">
+                                <h4>Memory Management</h4>
+                                <div class="setting-item">
+                                    <div class="memory-setting">
+                                        <label class="setting-label">Default Memory Allocation</label>
+                                        <div class="slider-container">
+                                            <input type="range" id="defaultMemory" min="1024" max="16384" step="512" value="4096" class="performance-slider">
+                                            <div class="slider-track"></div>
+                                        </div>
+                                        <div class="slider-labels">
+                                            <span>1GB</span>
+                                            <span id="defaultMemoryValue">4GB</span>
+                                            <span>16GB</span>
+                                        </div>
+                                        <p class="setting-desc">More memory improves performance but uses more system resources</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="setting-group">
+                                <h4>Download Settings</h4>
+                                <div class="setting-item">
+                                    <div class="concurrent-setting">
+                                        <label class="setting-label">Concurrent Downloads</label>
+                                        <select id="maxDownloads" class="setting-select">
+                                            <option value="1">1 (Slow)</option>
+                                            <option value="2">2</option>
+                                            <option value="4" selected>4 (Recommended)</option>
+                                            <option value="8">8</option>
+                                            <option value="16">16 (Fast)</option>
+                                        </select>
+                                        <p class="setting-desc">Higher values download faster but use more bandwidth</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="settings-section" data-section="advanced">
+                            <h3>Advanced Settings</h3>
+                            
+                            <div class="setting-group">
+                                <h4>Java Settings</h4>
+                                <div class="setting-item">
+                                    <div class="java-setting">
+                                        <label class="setting-label">Java Executable Path</label>
+                                        <div class="java-selector">
+                                            <input type="text" id="javaPath" class="java-input" placeholder="Auto-detect">
+                                            <button id="browseJava" class="directory-btn">Browse</button>
+                                        </div>
+                                        <p class="setting-desc">Leave empty to auto-detect Java installation</p>
+                                    </div>
+                                </div>
+                                <div class="setting-item">
+                                    <div class="jvm-setting">
+                                        <label class="setting-label">Additional JVM Arguments</label>
+                                        <textarea id="jvmArgs" class="jvm-textarea" placeholder="-XX:+UseG1GC -XX:+UnlockExperimentalVMOptions"></textarea>
+                                        <p class="setting-desc">Advanced JVM flags for performance tuning</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="setting-group">
+                                <h4>Developer Options</h4>
+                                <div class="setting-item">
+                                    <label class="setting-toggle">
+                                        <input type="checkbox" id="devMode">
+                                        <span class="toggle-slider"></span>
+                                        <div class="setting-info">
+                                            <span class="setting-title">Developer Mode</span>
+                                            <span class="setting-desc">Enable debug logging and developer tools</span>
+                                        </div>
+                                    </label>
+                                </div>
+                                <div class="setting-item">
+                                    <label class="setting-toggle">
+                                        <input type="checkbox" id="betaUpdates">
+                                        <span class="toggle-slider"></span>
+                                        <div class="setting-info">
+                                            <span class="setting-title">Beta Updates</span>
+                                            <span class="setting-desc">Receive pre-release launcher updates</span>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- About Screen -->
+            <div id="aboutScreen" class="screen">
+                <div class="page-header">
+                    <h1 class="page-title">About YNG Client</h1>
+                    <p class="page-subtitle">Free & Open Source Minecraft Launcher</p>
+                </div>
+
+                <div class="about-container">
+                    <div class="about-hero">
+                        <div class="about-logo">
+                            <div class="logo-icon large">🎮</div>
+                            <h2>YNG Client</h2>
+                            <p class="version-badge">Version <span id="aboutVersion">1.0.0</span></p>
+                        </div>
+                        
+                        <div class="about-description">
+                            <p>YNG Client is a free, open-source Minecraft launcher designed for Linux and Windows users who want a modern, fast, and secure way to play Minecraft.</p>
+                        </div>
+                    </div>
+
+                    <div class="about-features">
+                        <h3>Features</h3>
+                        <div class="feature-grid">
+                            <div class="feature-card">
+                                <div class="feature-icon">🔒</div>
+                                <h4>Secure Authentication</h4>
+                                <p>Official Microsoft OAuth2 authentication keeps your account safe</p>
+                            </div>
+                            <div class="feature-card">
+                                <div class="feature-icon">⚡</div>
+                                <h4>Lightning Fast</h4>
+                                <p>Optimized downloads and efficient resource management</p>
+                            </div>
+                            <div class="feature-card">
+                                <div class="feature-icon">🎨</div>
+                                <h4>Modern UI</h4>
+                                <p>Beautiful, intuitive interface built with modern web technologies</p>
+                            </div>
+                            <div class="feature-card">
+                                <div class="feature-icon">🔧</div>
+                                <h4>Highly Configurable</h4>
+                                <p>Extensive settings to customize your Minecraft experience</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="about-support">
+                        <h3>Platform Support</h3>
+                        <div class="platform-grid">
+                            <div class="platform-card supported">
+                                <div class="platform-icon">🐧</div>
+                                <h4>Linux</h4>
+                                <p>Full support for all major distributions</p>
+                            </div>
+                            <div class="platform-card supported">
+                                <div class="platform-icon">🪟</div>
+                                <h4>Windows</h4>
+                                <p>Windows 10 and 11 supported</p>
+                            </div>
+                            <div class="platform-card future">
+                                <div class="platform-icon">🍎</div>
+                                <h4>macOS</h4>
+                                <p>Maybe in the future (macOS is the worst OS anyway)</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="about-links">
+                        <h3>Links & Support</h3>
+                        <div class="link-grid">
+                            <a href="https://github.com/YNG-CLIENT/YNG-Client" class="link-card" target="_blank">
+                                <div class="link-icon">📂</div>
+                                <div class="link-content">
+                                    <h4>Source Code</h4>
+                                    <p>View on GitHub</p>
+                                </div>
+                            </a>
+                            <a href="https://github.com/YNG-CLIENT/YNG-Client/issues" class="link-card" target="_blank">
+                                <div class="link-icon">🐛</div>
+                                <div class="link-content">
+                                    <h4>Report Issues</h4>
+                                    <p>Bug reports & feature requests</p>
+                                </div>
+                            </a>
+                            <a href="https://github.com/YNG-CLIENT/YNG-Client/discussions" class="link-card" target="_blank">
+                                <div class="link-icon">💬</div>
+                                <div class="link-content">
+                                    <h4>Community</h4>
+                                    <p>Discussions & support</p>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="about-footer">
+                        <p class="license-info">
+                            Licensed under the MIT License. YNG Client is not affiliated with Mojang Studios or Microsoft Corporation.
+                        </p>
+                        <p class="copyright">
+                            © 2025 YNG Client Team. Minecraft is a trademark of Mojang Studios.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
