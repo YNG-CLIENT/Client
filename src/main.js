@@ -47,10 +47,15 @@ class YNGClient {
 
   createWindow() {
     this.mainWindow = new BrowserWindow({
-      width: 1200,
-      height: 800,
-      minWidth: 800,
-      minHeight: 600,
+      width: 1400,
+      height: 900,
+      minWidth: 1400,
+      minHeight: 900,
+      maxWidth: 1400,
+      maxHeight: 900,
+      resizable: false,
+      maximizable: false,
+      fullscreenable: false,
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,

@@ -1362,16 +1362,37 @@ class YNGClientApp {
   }
 
   updateDownloadProgress(progress) {
-    const progressBar = document.querySelector('.download-progress');
-    const progressText = document.querySelector('.download-text');
+    console.log('Download progress update:', progress);
     
-    if (progressBar) {
-      progressBar.style.width = `${progress.percentage}%`;
-    }
+    // Update any active progress bars
+    const progressBars = document.querySelectorAll('.download-progress');
+    const progressTexts = document.querySelectorAll('.download-text');
     
-    if (progressText) {
-      progressText.textContent = `${progress.task}: ${progress.percentage}%`;
-    }
+    progressBars.forEach(bar => {
+      bar.style.width = `${progress.percentage}%`;
+    });
+    
+    progressTexts.forEach(text => {
+      text.textContent = `${progress.message}: ${progress.percentage}%`;
+    });
+    
+    // Update version cards if they show download progress
+    const versionCards = document.querySelectorAll('.version-card');
+    versionCards.forEach(card => {
+      const progressBar = card.querySelector('.version-progress-fill');
+      const progressText = card.querySelector('.progress-text');
+      
+      if (progressBar) {
+        progressBar.style.width = `${progress.percentage}%`;
+      }
+      
+      if (progressText) {
+        progressText.textContent = `${progress.percentage}%`;
+      }
+    });
+    
+    // Update active downloads in downloads screen
+    this.updateActiveDownloadsList();
   }
 
   showNotification(message, type = 'info') {
