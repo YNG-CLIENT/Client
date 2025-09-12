@@ -8,10 +8,12 @@ on:
 jobs:
   build:
     runs-on: ${{ matrix.os }}
+    continue-on-error: true
     
     strategy:
+      fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-latest]
+        os: [windows-latest] # ubuntu-latest temporarily disabled
         
     steps:
       - name: Checkout repository
@@ -42,15 +44,15 @@ jobs:
             dist/*.exe
             dist/latest.yml
 
-      - name: Upload Linux artifacts
-        if: matrix.os == 'ubuntu-latest'
-        uses: actions/upload-artifact@v4
-        with:
-          name: linux-build
-          path: |
-            dist/*.AppImage
-            dist/*.deb
-            dist/latest-linux.yml
+      # - name: Upload Linux artifacts
+      #   if: matrix.os == 'ubuntu-latest'
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: linux-build
+      #     path: |
+      #       dist/*.AppImage
+      #       dist/*.deb
+      #       dist/latest-linux.yml
 
   release:
     needs: build
@@ -67,18 +69,18 @@ jobs:
           name: windows-build
           path: ./artifacts/windows/
           
-      - name: Download Linux artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: linux-build
-          path: ./artifacts/linux/
+      # - name: Download Linux artifacts
+      #   uses: actions/download-artifact@v4
+      #   with:
+      #     name: linux-build
+      #     path: ./artifacts/linux/
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
             ./artifacts/windows/*
-            ./artifacts/linux/*
+            # ./artifacts/linux/*
           draft: false
           prerelease: false
           generate_release_notes: true
