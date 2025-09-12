@@ -54,6 +54,10 @@ class DiscordRPCManager {
         {
           label: 'Download YNG Client',
           url: 'https://github.com/YNG-CLIENT/YNG-Client'
+        },
+        {
+          label: 'Join Discord Server',
+          url: 'https://discord.gg/HuwxFHy239'
         }
       ]
     };

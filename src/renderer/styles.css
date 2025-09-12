@@ -4782,3 +4782,81 @@ body {
 .cape-option .cape-info {
   position: relative;
 }
+
+/* Cape Rarity Badges */
+.cape-badge.common {
+  background: #9E9E9E;
+}
+
+.cape-badge.uncommon {
+  background: #4CAF50;
+}
+
+.cape-badge.rare {
+  background: #2196F3;
+}
+
+.cape-badge.epic {
+  background: #9C27B0;
+}
+
+.cape-badge.legendary {
+  background: #FF9800;
+  animation: legendary-glow 2s ease-in-out infinite alternate;
+}
+
+@keyframes legendary-glow {
+  from {
+    box-shadow: 0 0 5px rgba(255, 152, 0, 0.5);
+  }
+  to {
+    box-shadow: 0 0 15px rgba(255, 152, 0, 0.8);
+  }
+}
+
+/* Locked Cape Styling */
+.cape-option.locked {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.cape-option.locked:hover {
+  transform: none;
+  border-color: var(--border-color);
+  background: var(--bg-surface);
+}
+
+.cape-lock {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1.25rem;
+  color: var(--text-muted);
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.unlock-hint {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.6rem;
+  color: var(--warning);
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+/* Client Cape Styling */
+.cape-option.client-cape {
+  border-color: var(--accent);
+}
+
+.cape-option.client-cape:hover {
+  border-color: var(--accent-light);
+}

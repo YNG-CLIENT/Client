@@ -1,6 +1,8 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
+const fs = require('fs');
+const axios = require('axios');
 const AuthManager = require('./main/auth-manager');
 const MinecraftManager = require('./main/minecraft-manager');
 const LauncherManager = require('./main/launcher-manager');
@@ -274,7 +276,48 @@ class YNGClient {
 
     // Utility IPC handlers
     ipcMain.handle('app:getVersion', () => {
-      return app.getVersion();
+      try {
+        const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.json'), 'utf8'));
+        return packageJson.version;
+      } catch (error) {
+        console.error('Failed to read version from package.json:', error);
+        return app.getVersion();
+      }
+    });
+
+    ipcMain.handle('app:checkForUpdates', async () => {
+      try {
+        const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.json'), 'utf8'));
+        const currentVersion = packageJson.version;
+        
+        const response = await axios.get('https://api.github.com/repos/YNG-CLIENT/YNG-Client/releases/latest');
+        const latestVersion = response.data.tag_name.replace(/^v/, ''); // Remove 'v' prefix if present
+        
+        const isUpdateAvailable = this.compareVersions(latestVersion, currentVersion) > 0;
+        
+        return {
+          currentVersion,
+          latestVersion,
+          isUpdateAvailable,
+          downloadUrl: response.data.html_url
+        };
+      } catch (error) {
+        console.error('Failed to check for updates:', error);
+        return {
+          currentVersion: app.getVersion(),
+          latestVersion: null,
+          isUpdateAvailable: false,
+          error: error.message
+        };
+      }
+    });
+
+    ipcMain.handle('app:openGitHub', () => {
+      require('electron').shell.openExternal('https://github.com/YNG-CLIENT/YNG-Client');
+    });
+
+    ipcMain.handle('app:openDiscord', () => {
+      require('electron').shell.openExternal('https://discord.gg/HuwxFHy239');
     });
 
     ipcMain.handle('app:selectFolder', async () => {
@@ -412,6 +455,24 @@ class YNGClient {
     ipcMain.handle('updater:quitAndInstall', () => {
       autoUpdater.quitAndInstall();
     });
+  }
+
+  // Helper method to compare version strings (e.g., "1.2.3" vs "1.2.4")
+  compareVersions(version1, version2) {
+    const v1Parts = version1.split('.').map(Number);
+    const v2Parts = version2.split('.').map(Number);
+    
+    const maxLength = Math.max(v1Parts.length, v2Parts.length);
+    
+    for (let i = 0; i < maxLength; i++) {
+      const v1Part = v1Parts[i] || 0;
+      const v2Part = v2Parts[i] || 0;
+      
+      if (v1Part > v2Part) return 1;
+      if (v1Part < v2Part) return -1;
+    }
+    
+    return 0;
   }
 }
 

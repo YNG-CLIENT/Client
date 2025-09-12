@@ -178,8 +178,29 @@ class YNGClientApp {
       if (versionElement) {
         versionElement.textContent = `v${version}`;
       }
+      
+      // Check for updates and show indicator if available
+      this.checkForUpdates();
     } catch (error) {
       console.error('Failed to load app version:', error);
+    }
+  }
+
+  async checkForUpdates() {
+    try {
+      const updateInfo = await window.electronAPI.app.checkForUpdates();
+      const updateIndicator = document.getElementById('updateIndicator');
+      
+      if (updateInfo.isUpdateAvailable && updateIndicator) {
+        updateIndicator.classList.remove('hidden');
+        updateIndicator.style.background = 'var(--warning)';
+        updateIndicator.title = `Update available: v${updateInfo.latestVersion}`;
+        
+        // Show notification about update
+        this.showNotification(`New version v${updateInfo.latestVersion} is available!`, 'info');
+      }
+    } catch (error) {
+      console.error('Failed to check for updates:', error);
     }
   }
 
@@ -948,7 +969,9 @@ class YNGClientApp {
     // Get user's actual capes
     const userCapes = await this.getUserOwnedCapes();
     const mojangCapes = userCapes.filter(cape => cape.type === 'mojang');
-    const customCapes = userCapes.filter(cape => cape.type === 'custom');
+    
+    // Get YNG Client capes from assets
+    const clientCapes = await this.getClientCapes();
     
     modal.innerHTML = `
       <div class="modal-content cape-selection-modal">
@@ -957,11 +980,11 @@ class YNGClientApp {
           <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">×</button>
         </div>
         <div class="modal-body">
-          ${userCapes.length === 0 ? `
+          ${userCapes.length === 0 && clientCapes.length === 0 ? `
             <div class="no-capes-message">
               <div class="no-capes-icon">🎪</div>
               <h4>No Capes Available</h4>
-              <p>You don't own any official Mojang capes yet. You can add custom capes below!</p>
+              <p>You don't have any capes available at the moment. Official Mojang capes and future YNG Client reward capes will appear here!</p>
             </div>
           ` : `
             ${mojangCapes.length > 0 ? `
@@ -987,59 +1010,49 @@ class YNGClientApp {
               </div>
             ` : ''}
             
-            ${customCapes.length > 0 ? `
+            ${clientCapes.length > 0 ? `
               <div class="cape-section">
                 <h4 class="cape-section-title">
-                  <span class="cape-type-icon">🎨</span>
-                  Custom Capes
+                  <span class="cape-type-icon">�</span>
+                  YNG Client Capes
                 </h4>
                 <div class="cape-grid">
-                  ${customCapes.map(cape => `
-                    <div class="cape-option custom-cape" data-cape-id="${cape.id}">
+                  ${clientCapes.map(cape => `
+                    <div class="cape-option client-cape ${cape.unlocked ? '' : 'locked'}" data-cape-id="${cape.id}">
                       <div class="cape-preview">
-                        <img src="${cape.texture}" alt="${cape.name}" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCA2NCAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjMyIiBmaWxsPSIjNDQ0Ii8+Cjx0ZXh0IHg9IjMyIiB5PSIxOCIgZmlsbD0iI0FBQSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1zaXplPSIxMCI+Q2FwZTwvdGV4dD4KPHN2Zz4='" />
-                        <div class="cape-badge custom">Custom</div>
+                        <img src="./assets/capes/${cape.file}" alt="${cape.name}" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCA2NCAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjMyIiBmaWxsPSIjNDQ0Ii8+Cjx0ZXh0IHg9IjMyIiB5PSIxOCIgZmlsbD0iI0FBQSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1zaXplPSIxMCI+Q2FwZTwvdGV4dD4KPHN2Zz4='" />
+                        <div class="cape-badge ${cape.rarity}">${cape.rarity.charAt(0).toUpperCase() + cape.rarity.slice(1)}</div>
+                        ${!cape.unlocked ? '<div class="cape-lock">🔒</div>' : ''}
                       </div>
                       <div class="cape-info">
                         <h4>${cape.name}</h4>
                         <p>${cape.description}</p>
-                        <button class="cape-delete-btn" onclick="window.app.deleteCustomCape('${cape.id}', event)">🗑️</button>
+                        ${!cape.unlocked ? `<small class="unlock-hint">Unlock by: ${cape.unlock_condition}</small>` : ''}
                       </div>
                     </div>
                   `).join('')}
                 </div>
               </div>
             ` : ''}
-          `}
-          
-          <div class="cape-section">
-            <h4 class="cape-section-title">
-              <span class="cape-type-icon">➕</span>
-              Add Cape
-            </h4>
-            <div class="cape-grid">
-              <div class="cape-option add-cape-option" onclick="window.app.showAddCapeDialog()">
-                <div class="cape-preview add-cape">
-                  <span class="add-cape-icon">📁</span>
-                  <span class="add-cape-text">Add Custom</span>
-                </div>
-                <div class="cape-info">
-                  <h4>Add Custom Cape</h4>
-                  <p>Upload your own cape image</p>
-                </div>
-              </div>
-              
-              <div class="cape-option" data-cape-id="none">
-                <div class="cape-preview no-cape">
-                  <span>🚫</span>
-                </div>
-                <div class="cape-info">
-                  <h4>No Cape</h4>
-                  <p>Remove current cape</p>
+            
+            <div class="cape-section">
+              <h4 class="cape-section-title">
+                <span class="cape-type-icon">🚫</span>
+                Remove Cape
+              </h4>
+              <div class="cape-grid">
+                <div class="cape-option" data-cape-id="none">
+                  <div class="cape-preview no-cape">
+                    <span>🚫</span>
+                  </div>
+                  <div class="cape-info">
+                    <h4>No Cape</h4>
+                    <p>Remove current cape</p>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          `}
         </div>
         <div class="modal-footer">
           <button class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
@@ -1047,10 +1060,10 @@ class YNGClientApp {
         </div>
       </div>
     `;
-
+    
     // Add event listeners for cape selection
     modal.addEventListener('click', (e) => {
-      const capeOption = e.target.closest('.cape-option:not(.add-cape-option)');
+      const capeOption = e.target.closest('.cape-option:not(.locked)');
       if (capeOption && !e.target.classList.contains('cape-delete-btn')) {
         // Remove previous selection
         modal.querySelectorAll('.cape-option').forEach(opt => opt.classList.remove('selected'));
@@ -1061,9 +1074,7 @@ class YNGClientApp {
     });
 
     document.body.appendChild(modal);
-  }
-
-  async getUserOwnedCapes() {
+  }  async getUserOwnedCapes() {
     try {
       const ownedCapes = [];
       
@@ -1140,6 +1151,37 @@ class YNGClientApp {
     } catch (error) {
       console.error('Failed to fetch custom capes:', error);
       return [];
+    }
+  }
+
+  async getClientCapes() {
+    try {
+      // Load client capes from assets/capes.json
+      const response = await fetch('./assets/capes.json');
+      const capesData = await response.json();
+      
+      // Get user's unlock status for each cape
+      const unlockedCapes = await window.electronAPI.settings.get('unlockedClientCapes') || ['yng_classic']; // Default cape
+      
+      return capesData.client_capes.map(cape => ({
+        ...cape,
+        type: 'client',
+        unlocked: unlockedCapes.includes(cape.id),
+        texture: `./assets/capes/${cape.file}`
+      }));
+    } catch (error) {
+      console.error('Failed to fetch client capes:', error);
+      // Return default cape as fallback
+      return [{
+        id: 'yng_classic',
+        name: 'YNG Classic',
+        description: 'Default YNG Client cape',
+        file: 'yng_classic.png',
+        rarity: 'common',
+        unlocked: true,
+        type: 'client',
+        texture: './assets/capes/yng_classic.png'
+      }];
     }
   }
 
@@ -1274,96 +1316,6 @@ class YNGClientApp {
       modal.remove();
     } else {
       this.showNotification('Please select a cape first', 'warning');
-    }
-  }
-
-  async showAddCapeDialog() {
-    try {
-      // Open file dialog for cape selection
-      const result = await window.electronAPI.dialog.showOpenDialog({
-        title: 'Select Cape Image',
-        filters: [
-          { name: 'Images', extensions: ['png', 'jpg', 'jpeg'] }
-        ],
-        properties: ['openFile']
-      });
-
-      if (!result.canceled && result.filePaths.length > 0) {
-        const filePath = result.filePaths[0];
-        await this.addCustomCape(filePath);
-      }
-    } catch (error) {
-      console.error('Failed to open cape dialog:', error);
-      this.showNotification('Failed to open file dialog', 'error');
-    }
-  }
-
-  async addCustomCape(filePath) {
-    try {
-      // Generate unique ID for the cape
-      const capeId = `custom_${Date.now()}`;
-      
-      // Get filename without extension for default name
-      const fileName = filePath.split(/[\\/]/).pop().replace(/\.[^/.]+$/, "");
-      
-      // Read file and convert to base64
-      const fileData = await window.electronAPI.fs.readFile(filePath, { encoding: 'base64' });
-      const dataUrl = `data:image/png;base64,${fileData}`;
-      
-      // Create cape object
-      const newCape = {
-        id: capeId,
-        name: fileName || 'Custom Cape',
-        description: 'Custom uploaded cape',
-        texture: dataUrl,
-        type: 'custom',
-        owned: true,
-        dateAdded: new Date().toISOString()
-      };
-      
-      // Get existing custom capes
-      const customCapes = await window.electronAPI.settings.get('customCapes') || [];
-      
-      // Add new cape
-      customCapes.push(newCape);
-      
-      // Save to settings
-      await window.electronAPI.settings.set('customCapes', customCapes);
-      
-      this.showNotification(`Added custom cape: ${newCape.name}`, 'success');
-      
-      // Refresh the cape modal
-      document.querySelector('.cape-selection-modal')?.closest('.modal-overlay')?.remove();
-      await this.showCapeSelectionModal();
-      
-    } catch (error) {
-      console.error('Failed to add custom cape:', error);
-      this.showNotification('Failed to add custom cape', 'error');
-    }
-  }
-
-  async deleteCustomCape(capeId, event) {
-    event.stopPropagation();
-    
-    try {
-      // Get existing custom capes
-      const customCapes = await window.electronAPI.settings.get('customCapes') || [];
-      
-      // Remove the cape
-      const filteredCapes = customCapes.filter(cape => cape.id !== capeId);
-      
-      // Save updated list
-      await window.electronAPI.settings.set('customCapes', filteredCapes);
-      
-      this.showNotification('Custom cape deleted', 'success');
-      
-      // Refresh the cape modal
-      document.querySelector('.cape-selection-modal')?.closest('.modal-overlay')?.remove();
-      await this.showCapeSelectionModal();
-      
-    } catch (error) {
-      console.error('Failed to delete custom cape:', error);
-      this.showNotification('Failed to delete cape', 'error');
     }
   }
 
@@ -2525,7 +2477,7 @@ class YNGClientApp {
 
   loadAboutInfo() {
     // Load information for the about screen
-    const aboutVersion = document.querySelector('.about-version');
+    const aboutVersion = document.getElementById('aboutVersion');
     const aboutElectron = document.querySelector('.about-electron');
     const aboutNode = document.querySelector('.about-node');
 
@@ -2591,21 +2543,30 @@ class YNGClientApp {
   }
 
   showNotification(message, type = 'info') {
-    // Create or update notification
-    let notification = document.querySelector('.notification');
+    // Remove any existing notifications first
+    const existingNotifications = document.querySelectorAll('.notification');
+    existingNotifications.forEach(notif => notif.remove());
     
-    if (!notification) {
-      notification = document.createElement('div');
-      notification.className = 'notification';
-      document.body.appendChild(notification);
-    }
-    
+    // Create new notification
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
     notification.textContent = message;
-    notification.className = `notification ${type} show`;
+    document.body.appendChild(notification);
+    
+    // Trigger show animation
+    setTimeout(() => {
+      notification.classList.add('show');
+    }, 10);
     
     // Auto-hide after 5 seconds
     setTimeout(() => {
       notification.classList.remove('show');
+      // Remove from DOM after animation completes
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.remove();
+        }
+      }, 300); // Wait for CSS transition to complete
     }, 5000);
   }
 

@@ -32,7 +32,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // App utility methods
   app: {
     getVersion: () => ipcRenderer.invoke('app:getVersion'),
-    selectFolder: () => ipcRenderer.invoke('app:selectFolder')
+    selectFolder: () => ipcRenderer.invoke('app:selectFolder'),
+    checkForUpdates: () => ipcRenderer.invoke('app:checkForUpdates'),
+    openGitHub: () => ipcRenderer.invoke('app:openGitHub'),
+    openDiscord: () => ipcRenderer.invoke('app:openDiscord')
   },
 
   // Window controls
