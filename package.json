@@ -112,12 +112,6 @@
     },
     "extraMetadata": {
       "name": "yng-client"
-    },
-    "publish": {
-      "provider": "github",
-      "owner": "YNG-Client",
-      "repo": "Client",
-      "releaseType": "release"
     }
   }
 }

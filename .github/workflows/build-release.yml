@@ -31,6 +31,8 @@ jobs:
 
       - name: Build Electron app
         run: npm run build
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
       - name: Debug build output
         run: |
