@@ -27,7 +27,7 @@
     "electron",
     "gaming"
   ],
-  "author": "YNG Client Team",
+  "author": "YNG Client Team <yno@koopa.space>",
   "license": "MIT",
   "devDependencies": {
     "electron": "^27.0.0",
