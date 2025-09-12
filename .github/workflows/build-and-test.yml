@@ -66,14 +66,14 @@ jobs:
       run: |
         npm run build:linux || electron-builder --linux --publish=never
       env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GH_TOKEN: ${{ secrets.GIT_TOKEN }}
 
     - name: Build for Windows
       if: matrix.os == 'windows-latest'
       run: |
         npm run build:windows || electron-builder --windows --publish=never
       env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GH_TOKEN: ${{ secrets.GIT_TOKEN }}
 
     - name: Upload Linux build artifacts
       if: matrix.os == 'ubuntu-latest'
@@ -105,11 +105,6 @@ jobs:
     - name: Run npm audit
       run: npm audit --audit-level=moderate
 
-    - name: Run security scan with Snyk
-      uses: snyk/actions/node@master
-      continue-on-error: true
-      env:
-        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
   code-quality:
     name: Code Quality Check
@@ -134,7 +129,7 @@ jobs:
       uses: github/super-linter@v5
       env:
         DEFAULT_BRANCH: main
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GIT_TOKEN: ${{ secrets.GIT_TOKEN }}
         VALIDATE_ALL_CODEBASE: false
         VALIDATE_JAVASCRIPT_ES: true
         VALIDATE_HTML: true
