@@ -56,9 +56,10 @@ class ApiManager {
      */
     async authenticateUser(mcUuid, mcUsername) {
         try {
+            console.log('[API] Authenticating user:', mcUuid, mcUsername);
             const response = await this.api.post('/api/auth/signin', {
-                mcUuid,
-                mcUsername
+                minecraftUuid: mcUuid,
+                minecraftUsername: mcUsername
             });
 
             if (response.data.success) {
@@ -71,6 +72,10 @@ class ApiManager {
             }
         } catch (error) {
             console.error('[API] Authentication error:', error.message);
+            if (error.response) {
+                console.error('[API] Response data:', error.response.data);
+                console.error('[API] Response status:', error.response.status);
+            }
             throw error;
         }
     }
@@ -155,7 +160,7 @@ class ApiManager {
     async selectCape(mcUuid, capeId) {
         try {
             const response = await this.api.post('/api/capes/select', {
-                mcUuid,
+                minecraftUuid: mcUuid,
                 capeId
             });
 
@@ -191,7 +196,7 @@ class ApiManager {
     async updateUserStats(mcUuid, stats) {
         try {
             const response = await this.api.post('/api/auth/stats', {
-                mcUuid,
+                minecraftUuid: mcUuid,
                 stats
             });
 
@@ -216,10 +221,14 @@ class ApiManager {
     async checkCapeUnlock(mcUuid, capeId) {
         try {
             const response = await this.api.get(`/api/auth/unlock/${mcUuid}/${capeId}`);
-            return response.data.unlocked || false;
+            if (response.data.success) {
+                return { success: true, unlocked: response.data.unlocked };
+            } else {
+                return { success: false, unlocked: false };
+            }
         } catch (error) {
             console.error('[API] Error checking cape unlock:', error.message);
-            return false;
+            return { success: false, unlocked: false };
         }
     }
 

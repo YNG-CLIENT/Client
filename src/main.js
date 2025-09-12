@@ -11,6 +11,9 @@ const SettingsManager = require('./main/settings-manager');
 const PlaytimeTracker = require('./main/playtime-tracker');
 const InstancesManager = require('./main/instances-manager');
 const ApiManager = require('./main/api-manager');
+const CapeLoaderManager = require('./main/cape-loader-manager');
+const CapeTextureReplacer = require('./main/cape-texture-replacer');
+const MojangAPIManager = require('./main/mojang-api-manager');
 const config = require('./main/config');
 
 // Add GPU workarounds for Windows
@@ -32,6 +35,9 @@ class YNGClient {
     this.playtimeTracker = new PlaytimeTracker();
     this.instancesManager = new InstancesManager();
     this.apiManager = ApiManager;
+    this.capeLoader = new CapeLoaderManager();
+    this.capeTextureReplacer = new CapeTextureReplacer();
+    this.mojangAPI = new MojangAPIManager();
     
     // Initialize settings before app ready
     this.initializeManagers();
@@ -130,6 +136,44 @@ class YNGClient {
     ipcMain.handle('auth:login', async () => {
       try {
         const profile = await this.authManager.login();
+        
+        if (profile && !profile.isOffline) {
+          // Register user with API and fetch Mojang capes
+          try {
+            console.log('Authenticating with YNG API and fetching Mojang capes...');
+            
+            // Authenticate with YNG API
+            const apiAuth = await this.apiManager.authenticateUser(profile.id, profile.name);
+            
+            if (apiAuth.success) {
+              console.log('Successfully authenticated with YNG API');
+              
+              // Fetch user's Mojang capes
+              const mojangCapes = await this.mojangAPI.getUserCapes(profile.id);
+              console.log('Found Mojang capes:', mojangCapes.length);
+              
+              // Update user stats with cape information
+              if (mojangCapes.length > 0) {
+                const stats = {
+                  mojangCapes: mojangCapes.length,
+                  hasVanillaCape: mojangCapes.some(cape => cape.active),
+                  lastCapeSync: new Date().toISOString()
+                };
+                
+                await this.apiManager.updateUserStats(profile.id, stats);
+                console.log('Updated user stats with Mojang cape data');
+              }
+              
+              // Store Mojang capes in profile for UI
+              profile.mojangCapes = mojangCapes;
+            } else {
+              console.warn('Failed to authenticate with YNG API:', apiAuth.error);
+            }
+          } catch (error) {
+            console.warn('YNG API integration failed (continuing with limited features):', error.message);
+          }
+        }
+        
         this.discordRPC.setLauncherActivity('home');
         return { success: true, profile };
       } catch (error) {
@@ -528,6 +572,169 @@ class YNGClient {
         isDevelopment: config.isDevelopment(),
         isDebugMode: config.isDebugMode()
       };
+    });
+
+    // Cape loader IPC handlers for in-game cape management
+    ipcMain.handle('capeLoader:setGameDirectory', (event, gameDir) => {
+      this.capeLoader.setGameDirectory(gameDir);
+      return { success: true };
+    });
+
+    ipcMain.handle('capeLoader:loadCape', async (event, mcUuid, capeId) => {
+      try {
+        const success = await this.capeLoader.loadCapeForUser(mcUuid, capeId);
+        return { success };
+      } catch (error) {
+        console.error('Failed to load cape:', error);
+        return { success: false, error: error.message };
+      }
+    });
+
+    ipcMain.handle('capeLoader:removeCape', async (event, mcUuid) => {
+      try {
+        const success = await this.capeLoader.removeCapeForUser(mcUuid);
+        return { success };
+      } catch (error) {
+        console.error('Failed to remove cape:', error);
+        return { success: false, error: error.message };
+      }
+    });
+
+    ipcMain.handle('capeLoader:getSelectedCape', async (event, mcUuid) => {
+      try {
+        const capeId = await this.capeLoader.getSelectedCape(mcUuid);
+        return { success: true, capeId };
+      } catch (error) {
+        console.error('Failed to get selected cape:', error);
+        return { success: false, error: error.message, capeId: null };
+      }
+    });
+
+    ipcMain.handle('capeLoader:isCapeDownloaded', async (event, mcUuid, capeId) => {
+      try {
+        const downloaded = await this.capeLoader.isCapeDownloaded(mcUuid, capeId);
+        return { success: true, downloaded };
+      } catch (error) {
+        console.error('Failed to check cape download status:', error);
+        return { success: false, error: error.message, downloaded: false };
+      }
+    });
+
+    ipcMain.handle('capeLoader:getUserProfile', async (event, mcUuid) => {
+      try {
+        const profile = await this.capeLoader.getUserProfile(mcUuid);
+        return { success: true, profile };
+      } catch (error) {
+        console.error('Failed to get cape profile:', error);
+        return { success: false, error: error.message, profile: null };
+      }
+    });
+
+    ipcMain.handle('capeLoader:cleanupOldCapes', async (event, maxAge) => {
+      try {
+        await this.capeLoader.cleanupOldCapes(maxAge || 30);
+        return { success: true };
+      } catch (error) {
+        console.error('Failed to cleanup old capes:', error);
+        return { success: false, error: error.message };
+      }
+    });
+
+    // Mojang API IPC handlers
+    ipcMain.handle('mojang:getUserProfile', async (event, uuid) => {
+      try {
+        const profile = await this.mojangAPI.getUserProfile(uuid);
+        return { success: true, profile };
+      } catch (error) {
+        console.error('Failed to get Mojang profile:', error);
+        return { success: false, error: error.message, profile: null };
+      }
+    });
+
+    ipcMain.handle('mojang:getUserCapes', async (event, uuid) => {
+      try {
+        const capes = await this.mojangAPI.getUserCapes(uuid);
+        return { success: true, capes };
+      } catch (error) {
+        console.error('Failed to get Mojang capes:', error);
+        return { success: false, error: error.message, capes: [] };
+      }
+    });
+
+    ipcMain.handle('mojang:extractSkinUrl', async (event, profile) => {
+      try {
+        const skinUrl = this.mojangAPI.extractSkinUrl(profile);
+        return { success: true, skinUrl };
+      } catch (error) {
+        console.error('Failed to extract skin URL:', error);
+        return { success: false, error: error.message, skinUrl: null };
+      }
+    });
+
+    // Cape texture replacer IPC handlers for vanilla cape integration
+    ipcMain.handle('capeReplacer:setGameDirectory', (event, gameDir) => {
+      this.capeTextureReplacer.setGameDirectory(gameDir);
+      return { success: true };
+    });
+
+    ipcMain.handle('capeReplacer:initializeResourcePack', async () => {
+      try {
+        const success = await this.capeTextureReplacer.initializeResourcePack();
+        return { success };
+      } catch (error) {
+        console.error('Failed to initialize resource pack:', error);
+        return { success: false, error: error.message };
+      }
+    });
+
+    ipcMain.handle('capeReplacer:replaceCapeTexture', async (event, mcUuid, capeTextureUrl) => {
+      try {
+        const success = await this.capeTextureReplacer.replaceCapeTexture(mcUuid, capeTextureUrl);
+        return { success };
+      } catch (error) {
+        console.error('Failed to replace cape texture:', error);
+        return { success: false, error: error.message };
+      }
+    });
+
+    ipcMain.handle('capeReplacer:removeCapeTexture', async (event, mcUuid) => {
+      try {
+        const success = await this.capeTextureReplacer.removeCapeTexture(mcUuid);
+        return { success };
+      } catch (error) {
+        console.error('Failed to remove cape texture:', error);
+        return { success: false, error: error.message };
+      }
+    });
+
+    ipcMain.handle('capeReplacer:enableResourcePack', async () => {
+      try {
+        const success = await this.capeTextureReplacer.enableResourcePack();
+        return { success };
+      } catch (error) {
+        console.error('Failed to enable resource pack:', error);
+        return { success: false, error: error.message };
+      }
+    });
+
+    ipcMain.handle('capeReplacer:isResourcePackInstalled', async () => {
+      try {
+        const installed = await this.capeTextureReplacer.isResourcePackInstalled();
+        return { success: true, installed };
+      } catch (error) {
+        console.error('Failed to check resource pack installation:', error);
+        return { success: false, error: error.message, installed: false };
+      }
+    });
+
+    ipcMain.handle('capeReplacer:cleanupOldTextures', async (event, maxAge) => {
+      try {
+        await this.capeTextureReplacer.cleanupOldTextures(maxAge || 30);
+        return { success: true };
+      } catch (error) {
+        console.error('Failed to cleanup old textures:', error);
+        return { success: false, error: error.message };
+      }
     });
   }
 

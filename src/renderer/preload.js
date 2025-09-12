@@ -91,5 +91,34 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getCurrentUser: () => ipcRenderer.invoke('api:getCurrentUser'),
     logout: () => ipcRenderer.invoke('api:logout'),
     getConfig: () => ipcRenderer.invoke('api:getConfig')
+  },
+
+  // Cape loader methods for in-game cape management
+  capeLoader: {
+    setGameDirectory: (gameDir) => ipcRenderer.invoke('capeLoader:setGameDirectory', gameDir),
+    loadCape: (mcUuid, capeId) => ipcRenderer.invoke('capeLoader:loadCape', mcUuid, capeId),
+    removeCape: (mcUuid) => ipcRenderer.invoke('capeLoader:removeCape', mcUuid),
+    getSelectedCape: (mcUuid) => ipcRenderer.invoke('capeLoader:getSelectedCape', mcUuid),
+    isCapeDownloaded: (mcUuid, capeId) => ipcRenderer.invoke('capeLoader:isCapeDownloaded', mcUuid, capeId),
+    getUserProfile: (mcUuid) => ipcRenderer.invoke('capeLoader:getUserProfile', mcUuid),
+    cleanupOldCapes: (maxAge) => ipcRenderer.invoke('capeLoader:cleanupOldCapes', maxAge)
+  },
+
+  // Mojang API methods for profile and cape data
+  mojang: {
+    getUserProfile: (uuid) => ipcRenderer.invoke('mojang:getUserProfile', uuid),
+    getUserCapes: (uuid) => ipcRenderer.invoke('mojang:getUserCapes', uuid),
+    extractSkinUrl: (profile) => ipcRenderer.invoke('mojang:extractSkinUrl', profile)
+  },
+
+  // Cape texture replacer methods for vanilla Minecraft integration
+  capeReplacer: {
+    setGameDirectory: (gameDir) => ipcRenderer.invoke('capeReplacer:setGameDirectory', gameDir),
+    initializeResourcePack: () => ipcRenderer.invoke('capeReplacer:initializeResourcePack'),
+    replaceCapeTexture: (mcUuid, capeTextureUrl) => ipcRenderer.invoke('capeReplacer:replaceCapeTexture', mcUuid, capeTextureUrl),
+    removeCapeTexture: (mcUuid) => ipcRenderer.invoke('capeReplacer:removeCapeTexture', mcUuid),
+    enableResourcePack: () => ipcRenderer.invoke('capeReplacer:enableResourcePack'),
+    isResourcePackInstalled: () => ipcRenderer.invoke('capeReplacer:isResourcePackInstalled'),
+    cleanupOldTextures: (maxAge) => ipcRenderer.invoke('capeReplacer:cleanupOldTextures', maxAge)
   }
 });

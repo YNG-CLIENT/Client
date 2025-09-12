@@ -1,63 +1,8 @@
 {
   "client_capes": [
-    {
-      "id": "yng_founder",
-      "name": "YNG Founder",
-      "description": "Exclusive cape for YNG Client founders",
-      "file": "yng_founder.png",
-      "rarity": "legendary",
-      "unlock_condition": "founder",
-      "requirements": {
-        "early_supporter": true,
-        "date_before": "2025-12-31"
-      }
-    },
-    {
-      "id": "yng_contributor",
-      "name": "YNG Contributor",
-      "description": "For those who contribute to the project",
-      "file": "yng_contributor.png",
-      "rarity": "epic",
-      "unlock_condition": "contributor",
-      "requirements": {
-        "github_contributions": 1
-      }
-    },
-    {
-      "id": "yng_community",
-      "name": "YNG Community",
-      "description": "Active community member cape",
-      "file": "yng_community.png",
-      "rarity": "rare",
-      "unlock_condition": "community",
-      "requirements": {
-        "discord_member": true,
-        "active_days": 30
-      }
-    },
-    {
-      "id": "yng_beta",
-      "name": "YNG Beta Tester",
-      "description": "Beta testing participant cape",
-      "file": "yng_beta.png",
-      "rarity": "uncommon",
-      "unlock_condition": "beta_tester",
-      "requirements": {
-        "beta_participation": true
-      }
-    },
-    {
-      "id": "yng_classic",
-      "name": "YNG Classic",
-      "description": "Default YNG Client cape",
-      "file": "yng_classic.png",
-      "rarity": "common",
-      "unlock_condition": "default",
-      "requirements": {}
-    }
   ],
   "config": {
-    "api_endpoint": "https://api.yngclient.com/capes",
+    "api_endpoint": "http://localhost:3001/api/capes",
     "cache_duration": 3600,
     "fallback_enabled": true,
     "reward_system": {

@@ -561,15 +561,18 @@ class YNGClientApp {
         }
 
         // Authenticate with API for cape management (only for online users)
-        if (!this.currentUser.isOffline && this.currentUser.uuid) {
+        if (!this.currentUser.isOffline && this.currentUser.id) {
           try {
             const apiResult = await window.electronAPI.api.authenticate(
-              this.currentUser.uuid,
+              this.currentUser.id,
               this.currentUser.name || this.currentUser.username
             );
             
             if (apiResult.success) {
               console.log('Successfully authenticated with YNG API');
+              
+              // Initialize cape systems
+              await this.initializeCapeSystemsForUser();
             } else {
               console.warn('Failed to authenticate with YNG API:', apiResult.error);
             }
@@ -584,6 +587,68 @@ class YNGClientApp {
       usernameElements.forEach(el => {
         if (el) el.textContent = 'Error loading profile';
       });
+    }
+  }
+
+  /**
+   * Initialize cape systems for the current user
+   */
+  async initializeCapeSystemsForUser() {
+    try {
+      if (!this.currentUser?.id) {
+        return;
+      }
+
+      console.log('Initializing cape systems for user:', this.currentUser.id);
+      
+      // Get game directory
+      const gameDir = await window.electronAPI.minecraft.getDefaultDirectory();
+      
+      // Set game directory for both cape systems
+      await window.electronAPI.capeLoader.setGameDirectory(gameDir);
+      await window.electronAPI.capeReplacer.setGameDirectory(gameDir);
+      
+      // Initialize resource pack for vanilla integration
+      const resourcePackResult = await window.electronAPI.capeReplacer.initializeResourcePack();
+      if (resourcePackResult.success) {
+        console.log('YNG cape resource pack initialized');
+        
+        // Check if resource pack is installed
+        const installResult = await window.electronAPI.capeReplacer.isResourcePackInstalled();
+        if (installResult.success && installResult.installed) {
+          console.log('YNG cape resource pack is ready');
+        }
+      }
+      
+      // Check if user has a selected cape and load it
+      const selectedCapeResult = await window.electronAPI.capeLoader.getSelectedCape(this.currentUser.id);
+      if (selectedCapeResult.success && selectedCapeResult.capeId) {
+        const capeId = selectedCapeResult.capeId;
+        console.log('User has selected cape:', capeId);
+        
+        // Check if cape is already downloaded
+        const downloadedResult = await window.electronAPI.capeLoader.isCapeDownloaded(this.currentUser.id, capeId);
+        if (!downloadedResult.success || !downloadedResult.downloaded) {
+          // Load the cape
+          console.log('Loading selected cape:', capeId);
+          const loadResult = await window.electronAPI.capeLoader.loadCape(this.currentUser.id, capeId);
+          
+          if (loadResult.success) {
+            // Also update vanilla texture
+            const capeTextureUrl = window.electronAPI.api.getCapeTextureUrl(capeId);
+            await window.electronAPI.capeReplacer.replaceCapeTexture(this.currentUser.id, capeTextureUrl);
+            console.log('Selected cape loaded and applied');
+          }
+        }
+      }
+      
+      // Clean up old cape files (older than 30 days)
+      await window.electronAPI.capeLoader.cleanupOldCapes(30);
+      await window.electronAPI.capeReplacer.cleanupOldTextures(30);
+      
+      console.log('Cape systems initialized successfully');
+    } catch (error) {
+      console.error('Failed to initialize cape systems:', error);
     }
   }
 
@@ -1101,9 +1166,9 @@ class YNGClientApp {
       ownedCapes.push(...officialCapes);
       
       // Get YNG Client capes from API (with user's owned status)
-      if (!this.currentUser?.isOffline && this.currentUser?.uuid) {
+      if (!this.currentUser?.isOffline && this.currentUser?.id) {
         try {
-          const userCapesResult = await window.electronAPI.api.getUserCapes(this.currentUser.uuid);
+          const userCapesResult = await window.electronAPI.api.getUserCapes(this.currentUser.id);
           if (userCapesResult.success) {
             const apiCapes = userCapesResult.capes.map(cape => ({
               ...cape,
@@ -1132,44 +1197,58 @@ class YNGClientApp {
 
   async getMojangOwnedCapes() {
     try {
-      if (!this.currentUser || !this.currentUser.uuid) {
+      if (!this.currentUser || !this.currentUser.id || this.currentUser.isOffline) {
         return [];
       }
-      
-      // Fetch user's cape data from Mojang API
-      const response = await fetch(`https://sessionserver.mojang.com/session/minecraft/profile/${this.currentUser.uuid}`);
-      if (!response.ok) {
-        console.warn('Failed to fetch user cape data');
-        return [];
+
+      // First try to get capes from the stored profile data (from login)
+      if (this.currentUser.mojangCapes && this.currentUser.mojangCapes.length > 0) {
+        console.log('Using cached Mojang capes from login');
+        return this.currentUser.mojangCapes;
       }
+
+      // Fallback: fetch directly from Mojang API
+      console.log('Fetching Mojang capes from API...');
+      const mojangResult = await window.electronAPI.mojang.getUserCapes(this.currentUser.id);
       
-      const profile = await response.json();
-      const capes = [];
-      
-      // Check for cape in profile properties
-      if (profile.properties) {
-        for (const prop of profile.properties) {
-          if (prop.name === 'textures') {
-            try {
-              const textureData = JSON.parse(atob(prop.value));
-              if (textureData.textures?.CAPE) {
-                // User has a cape - determine which one it is
-                const capeUrl = textureData.textures.CAPE.url;
-                const cape = this.identifyCapeFromUrl(capeUrl);
-                if (cape) {
-                  cape.type = 'mojang';
-                  cape.owned = true;
-                  capes.push(cape);
+      if (mojangResult.success && mojangResult.capes.length > 0) {
+        console.log('Found Mojang capes:', mojangResult.capes.length);
+        return mojangResult.capes;
+      }
+
+      // Legacy fallback: parse from profile textures
+      const profileResult = await window.electronAPI.mojang.getUserProfile(this.currentUser.id);
+      if (profileResult.success && profileResult.profile) {
+        const profile = profileResult.profile;
+        const capes = [];
+        
+        // Check for cape in profile properties
+        if (profile.properties) {
+          for (const prop of profile.properties) {
+            if (prop.name === 'textures') {
+              try {
+                const textureData = JSON.parse(atob(prop.value));
+                if (textureData.textures?.CAPE) {
+                  // User has a cape - determine which one it is
+                  const capeUrl = textureData.textures.CAPE.url;
+                  const cape = this.identifyCapeFromUrl(capeUrl);
+                  if (cape) {
+                    cape.type = 'mojang';
+                    cape.owned = true;
+                    capes.push(cape);
+                  }
                 }
+              } catch (error) {
+                console.warn('Failed to parse texture data:', error);
               }
-            } catch (error) {
-              console.warn('Failed to parse texture data:', error);
             }
           }
         }
+        
+        return capes;
       }
       
-      return capes;
+      return [];
     } catch (error) {
       console.error('Failed to fetch Mojang capes:', error);
       return [];
@@ -1200,7 +1279,7 @@ class YNGClientApp {
         console.log('Loading capes from API:', apiResult.capes.length);
         
         // Check which capes the user has unlocked
-        const userUuid = this.currentUser?.uuid;
+        const userUuid = this.currentUser?.id;
         const capesWithUnlockStatus = await Promise.all(
           apiResult.capes.map(async (cape) => {
             let unlocked = true; // Default to unlocked for fallback
@@ -1208,7 +1287,7 @@ class YNGClientApp {
             if (userUuid && !this.currentUser?.isOffline) {
               try {
                 const unlockResult = await window.electronAPI.api.checkCapeUnlock(userUuid, cape.id);
-                unlocked = unlockResult.success ? unlockResult.unlocked : true;
+                unlocked = unlockResult.success && unlockResult.unlocked;
               } catch (error) {
                 console.warn('Failed to check unlock status for cape:', cape.id, error);
               }
@@ -1218,6 +1297,7 @@ class YNGClientApp {
               ...cape,
               type: 'client',
               unlocked: unlocked,
+              unlock_condition: cape.unlockCondition, // Add this for compatibility
               texture: window.electronAPI.api.getCapeTextureUrl(cape.id)
             };
           })
@@ -1386,8 +1466,8 @@ class YNGClientApp {
     if (selectedCapeId !== undefined) {
       try {
         // Use API to select cape if user is authenticated and online
-        if (!this.currentUser?.isOffline && this.currentUser?.uuid) {
-          const apiResult = await window.electronAPI.api.selectCape(this.currentUser.uuid, selectedCapeId);
+        if (!this.currentUser?.isOffline && this.currentUser?.id) {
+          const apiResult = await window.electronAPI.api.selectCape(this.currentUser.id, selectedCapeId);
           
           if (apiResult.success) {
             console.log('Cape selected via API:', selectedCapeId);
@@ -1398,6 +1478,63 @@ class YNGClientApp {
         } else {
           // Fallback to local storage for offline users
           await window.electronAPI.settings.set('selectedCape', selectedCapeId);
+        }
+
+        // Load cape in-game if a cape is selected (not "none")
+        if (selectedCapeId !== 'none' && this.currentUser?.id) {
+          try {
+            // Set game directory for cape systems
+            const gameDir = await window.electronAPI.minecraft.getDefaultDirectory();
+            await window.electronAPI.capeLoader.setGameDirectory(gameDir);
+            await window.electronAPI.capeReplacer.setGameDirectory(gameDir);
+            
+            // Initialize resource pack for vanilla integration
+            const resourcePackResult = await window.electronAPI.capeReplacer.initializeResourcePack();
+            if (resourcePackResult.success) {
+              console.log('Resource pack initialized for vanilla cape integration');
+            }
+            
+            // Load the cape texture for in-game use
+            const loadResult = await window.electronAPI.capeLoader.loadCape(this.currentUser.id, selectedCapeId);
+            
+            if (loadResult.success) {
+              console.log('Cape loaded for in-game use:', selectedCapeId);
+              
+              // Get cape texture URL for vanilla replacement
+              const capeTextureUrl = window.electronAPI.api.getCapeTextureUrl(selectedCapeId);
+              
+              // Replace cape texture in vanilla Minecraft
+              const replaceResult = await window.electronAPI.capeReplacer.replaceCapeTexture(
+                this.currentUser.id, 
+                capeTextureUrl
+              );
+              
+              if (replaceResult.success) {
+                console.log('Cape texture replaced in vanilla Minecraft');
+                
+                // Enable the resource pack
+                const enableResult = await window.electronAPI.capeReplacer.enableResourcePack();
+                if (enableResult.success) {
+                  console.log('YNG cape resource pack enabled');
+                }
+              } else {
+                console.warn('Failed to replace cape texture in vanilla Minecraft');
+              }
+            } else {
+              console.warn('Failed to load cape for in-game use');
+            }
+          } catch (error) {
+            console.error('Error setting up cape systems:', error);
+          }
+        } else if (selectedCapeId === 'none' && this.currentUser?.id) {
+          // Remove cape from both systems
+          try {
+            await window.electronAPI.capeLoader.removeCape(this.currentUser.id);
+            await window.electronAPI.capeReplacer.removeCapeTexture(this.currentUser.id);
+            console.log('Cape removed from all systems');
+          } catch (error) {
+            console.error('Error removing cape from systems:', error);
+          }
         }
 
         if (selectedCapeId === 'none') {
