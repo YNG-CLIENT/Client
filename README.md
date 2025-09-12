@@ -181,6 +181,17 @@ This project is licensed under the **MIT License** - completely free and open-so
 - **Open Source Community** for inspiration and support
 
 ---
+### FAQ
+
+- **Why Would We Need ANOTHER client?** You don't you should **NOT** need another client VS the base minecraft client.... BUT microsoft dose not care about the looks or performance even MOST major clients don't saying Hey! Let me spend 20$ for a FUCKING CAPE.
+ - **How can the client be open source BUT Connect to the YNG Client API?** We care about security and have the API source code limited to 2 people [@KoopaCode](https://github.com/KoopaCode) & [@iakzs](https://github.com/iakzs) you connect to it using our API url setup via the /src/main/src/main/config.js file! 
+ - **Will the API ever be open source?** Depends aslong as we continue the development we **WONT** release the source for the API. If the development ever stops we **WILL** release the API & or update the client to have the API built in & or make it setup to play without the API
+ - **Can I OPT out of using the YNG API?** Kinda? We are working on making a documentation so YOU can create you're OWN api! and set the new API endpoint in the settings tab. We plan to setup a OPT out of auto updates and YNG Client API option SOON!
+ - **How do the YNG Client Capes work?** We create capes on our [Appwrite](https://appwrite.io/) DB and upload to there bucket and the client will check if the signed in user was granted the said cape!
+ - **What DO we store in our API?** We Store 1. UUID 2. Username 3. Granted Capes 4, Client Version! Everything else is disgraded and not synced to our [Appwrite](https://appwrite.io/)
+
+   
+---
 
 <div align="center">
   <p><strong>🎮 YNG Client - Free Open Source Minecraft Launcher 🎮</strong></p>
