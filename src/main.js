@@ -10,6 +10,8 @@ const DiscordRPCManager = require('./main/discord-rpc-manager');
 const SettingsManager = require('./main/settings-manager');
 const PlaytimeTracker = require('./main/playtime-tracker');
 const InstancesManager = require('./main/instances-manager');
+const ApiManager = require('./main/api-manager');
+const config = require('./main/config');
 
 // Add GPU workarounds for Windows
 if (process.platform === 'win32') {
@@ -29,6 +31,7 @@ class YNGClient {
     this.settingsManager = new SettingsManager();
     this.playtimeTracker = new PlaytimeTracker();
     this.instancesManager = new InstancesManager();
+    this.apiManager = ApiManager;
     
     // Initialize settings before app ready
     this.initializeManagers();
@@ -290,7 +293,7 @@ class YNGClient {
         const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.json'), 'utf8'));
         const currentVersion = packageJson.version;
         
-        const response = await axios.get('https://api.github.com/repos/YNG-CLIENT/YNG-Client/releases/latest');
+        const response = await axios.get('https://api.github.com/repos/YNG-Client/Client/releases/latest');
         const latestVersion = response.data.tag_name.replace(/^v/, ''); // Remove 'v' prefix if present
         
         const isUpdateAvailable = this.compareVersions(latestVersion, currentVersion) > 0;
@@ -313,7 +316,7 @@ class YNGClient {
     });
 
     ipcMain.handle('app:openGitHub', () => {
-      require('electron').shell.openExternal('https://github.com/YNG-CLIENT/YNG-Client');
+      require('electron').shell.openExternal('https://github.com/YNG-Client/Client');
     });
 
     ipcMain.handle('app:openDiscord', () => {
@@ -438,6 +441,93 @@ class YNGClient {
         console.error('Failed to read file:', error);
         throw error;
       }
+    });
+
+    // API IPC handlers for cape management
+    ipcMain.handle('api:authenticate', async (event, mcUuid, mcUsername) => {
+      try {
+        const result = await this.apiManager.authenticateUser(mcUuid, mcUsername);
+        return { success: true, ...result };
+      } catch (error) {
+        console.error('API authentication error:', error);
+        return { success: false, error: error.message };
+      }
+    });
+
+    ipcMain.handle('api:getUserCapes', async (event, mcUuid) => {
+      try {
+        const capes = await this.apiManager.getUserCapes(mcUuid);
+        return { success: true, capes };
+      } catch (error) {
+        console.error('API get user capes error:', error);
+        return { success: false, error: error.message, capes: [] };
+      }
+    });
+
+    ipcMain.handle('api:getAllCapes', async () => {
+      try {
+        const capes = await this.apiManager.getAllCapes();
+        return { success: true, capes };
+      } catch (error) {
+        console.error('API get all capes error:', error);
+        return { success: false, error: error.message, capes: [] };
+      }
+    });
+
+    ipcMain.handle('api:selectCape', async (event, mcUuid, capeId) => {
+      try {
+        const result = await this.apiManager.selectCape(mcUuid, capeId);
+        return { success: true, ...result };
+      } catch (error) {
+        console.error('API select cape error:', error);
+        return { success: false, error: error.message };
+      }
+    });
+
+    ipcMain.handle('api:getCapeTextureUrl', (event, capeId) => {
+      return this.apiManager.getCapeTextureUrl(capeId);
+    });
+
+    ipcMain.handle('api:updateUserStats', async (event, mcUuid, stats) => {
+      try {
+        const result = await this.apiManager.updateUserStats(mcUuid, stats);
+        return { success: true, ...result };
+      } catch (error) {
+        console.error('API update stats error:', error);
+        return { success: false, error: error.message };
+      }
+    });
+
+    ipcMain.handle('api:checkCapeUnlock', async (event, mcUuid, capeId) => {
+      try {
+        const unlocked = await this.apiManager.checkCapeUnlock(mcUuid, capeId);
+        return { success: true, unlocked };
+      } catch (error) {
+        console.error('API check cape unlock error:', error);
+        return { success: false, error: error.message, unlocked: false };
+      }
+    });
+
+    ipcMain.handle('api:isAuthenticated', () => {
+      return this.apiManager.isUserAuthenticated();
+    });
+
+    ipcMain.handle('api:getCurrentUser', () => {
+      return this.apiManager.getCurrentUser();
+    });
+
+    ipcMain.handle('api:logout', () => {
+      this.apiManager.logout();
+      return { success: true };
+    });
+
+    ipcMain.handle('api:getConfig', () => {
+      return {
+        apiUrl: config.API_BASE_URL,
+        endpoints: config.API_ENDPOINTS,
+        isDevelopment: config.isDevelopment(),
+        isDebugMode: config.isDebugMode()
+      };
     });
   }
 

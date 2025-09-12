@@ -76,5 +76,20 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // File system methods for cape management
   fs: {
     readFile: (filePath, options) => ipcRenderer.invoke('fs:readFile', filePath, options)
+  },
+
+  // API methods for dynamic cape management
+  api: {
+    authenticate: (mcUuid, mcUsername) => ipcRenderer.invoke('api:authenticate', mcUuid, mcUsername),
+    getUserCapes: (mcUuid) => ipcRenderer.invoke('api:getUserCapes', mcUuid),
+    getAllCapes: () => ipcRenderer.invoke('api:getAllCapes'),
+    selectCape: (mcUuid, capeId) => ipcRenderer.invoke('api:selectCape', mcUuid, capeId),
+    getCapeTextureUrl: (capeId) => ipcRenderer.invoke('api:getCapeTextureUrl', capeId),
+    updateUserStats: (mcUuid, stats) => ipcRenderer.invoke('api:updateUserStats', mcUuid, stats),
+    checkCapeUnlock: (mcUuid, capeId) => ipcRenderer.invoke('api:checkCapeUnlock', mcUuid, capeId),
+    isAuthenticated: () => ipcRenderer.invoke('api:isAuthenticated'),
+    getCurrentUser: () => ipcRenderer.invoke('api:getCurrentUser'),
+    logout: () => ipcRenderer.invoke('api:logout'),
+    getConfig: () => ipcRenderer.invoke('api:getConfig')
   }
 });

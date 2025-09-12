@@ -131,3 +131,6 @@ auth-cache/
 tmp/
 temp/
 .tmp/
+
+api/
+discord-bot/

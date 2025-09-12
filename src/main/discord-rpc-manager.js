@@ -53,7 +53,7 @@ class DiscordRPCManager {
       buttons: [
         {
           label: 'Download YNG Client',
-          url: 'https://github.com/YNG-CLIENT/YNG-Client'
+          url: 'https://github.com/YNG-Client/Client'
         },
         {
           label: 'Join Discord Server',
@@ -116,7 +116,7 @@ class DiscordRPCManager {
       buttons: [
         {
           label: 'Get YNG Client',
-          url: 'https://github.com/YNG-CLIENT/YNG-Client'
+          url: 'https://github.com/YNG-Client/Client'
         }
       ]
     };

@@ -559,6 +559,24 @@ class YNGClientApp {
             onlineIndicator.title = 'Online';
           }
         }
+
+        // Authenticate with API for cape management (only for online users)
+        if (!this.currentUser.isOffline && this.currentUser.uuid) {
+          try {
+            const apiResult = await window.electronAPI.api.authenticate(
+              this.currentUser.uuid,
+              this.currentUser.name || this.currentUser.username
+            );
+            
+            if (apiResult.success) {
+              console.log('Successfully authenticated with YNG API');
+            } else {
+              console.warn('Failed to authenticate with YNG API:', apiResult.error);
+            }
+          } catch (error) {
+            console.warn('API authentication error (cape system may be limited):', error);
+          }
+        }
       }
     } catch (error) {
       console.error('Failed to load user profile:', error);
@@ -1082,6 +1100,25 @@ class YNGClientApp {
       const officialCapes = await this.getMojangOwnedCapes();
       ownedCapes.push(...officialCapes);
       
+      // Get YNG Client capes from API (with user's owned status)
+      if (!this.currentUser?.isOffline && this.currentUser?.uuid) {
+        try {
+          const userCapesResult = await window.electronAPI.api.getUserCapes(this.currentUser.uuid);
+          if (userCapesResult.success) {
+            const apiCapes = userCapesResult.capes.map(cape => ({
+              ...cape,
+              type: 'client',
+              owned: true,
+              texture: window.electronAPI.api.getCapeTextureUrl(cape.id)
+            }));
+            ownedCapes.push(...apiCapes);
+            console.log('Loaded user capes from API:', apiCapes.length);
+          }
+        } catch (error) {
+          console.warn('Failed to load user capes from API, using fallback:', error);
+        }
+      }
+      
       // Get custom capes from local storage
       const customCapes = await this.getCustomCapes();
       ownedCapes.push(...customCapes);
@@ -1156,7 +1193,52 @@ class YNGClientApp {
 
   async getClientCapes() {
     try {
-      // Load client capes from assets/capes.json
+      // Try to get capes from API first
+      const apiResult = await window.electronAPI.api.getAllCapes();
+      
+      if (apiResult.success && apiResult.capes.length > 0) {
+        console.log('Loading capes from API:', apiResult.capes.length);
+        
+        // Check which capes the user has unlocked
+        const userUuid = this.currentUser?.uuid;
+        const capesWithUnlockStatus = await Promise.all(
+          apiResult.capes.map(async (cape) => {
+            let unlocked = true; // Default to unlocked for fallback
+            
+            if (userUuid && !this.currentUser?.isOffline) {
+              try {
+                const unlockResult = await window.electronAPI.api.checkCapeUnlock(userUuid, cape.id);
+                unlocked = unlockResult.success ? unlockResult.unlocked : true;
+              } catch (error) {
+                console.warn('Failed to check unlock status for cape:', cape.id, error);
+              }
+            }
+            
+            return {
+              ...cape,
+              type: 'client',
+              unlocked: unlocked,
+              texture: window.electronAPI.api.getCapeTextureUrl(cape.id)
+            };
+          })
+        );
+        
+        return capesWithUnlockStatus;
+      } else {
+        // Fallback to static capes.json file
+        console.warn('API not available, using fallback static capes');
+        return await this.getStaticClientCapes();
+      }
+    } catch (error) {
+      console.error('Failed to fetch client capes from API:', error);
+      // Fallback to static capes.json file
+      return await this.getStaticClientCapes();
+    }
+  }
+
+  async getStaticClientCapes() {
+    try {
+      // Load client capes from assets/capes.json as fallback
       const response = await fetch('./assets/capes.json');
       const capesData = await response.json();
       
@@ -1170,7 +1252,7 @@ class YNGClientApp {
         texture: `./assets/capes/${cape.file}`
       }));
     } catch (error) {
-      console.error('Failed to fetch client capes:', error);
+      console.error('Failed to fetch static client capes:', error);
       // Return default cape as fallback
       return [{
         id: 'yng_classic',
@@ -1297,23 +1379,43 @@ class YNGClientApp {
     ];
   }
 
-  applyCapeSelection() {
+  async applyCapeSelection() {
     const modal = document.querySelector('.cape-selection-modal').closest('.modal-overlay');
     const selectedCapeId = modal.selectedCapeId;
     
     if (selectedCapeId !== undefined) {
-      if (selectedCapeId === 'none') {
-        this.showNotification('Cape removed!', 'success');
-      } else {
-        // Find the cape details
-        const allCapes = [...document.querySelectorAll('.cape-option[data-cape-id]')];
-        const selectedCape = allCapes.find(cape => cape.dataset.capeId === selectedCapeId);
-        if (selectedCape) {
-          const capeName = selectedCape.querySelector('h4').textContent;
-          this.showNotification(`Applied ${capeName} cape!`, 'success');
+      try {
+        // Use API to select cape if user is authenticated and online
+        if (!this.currentUser?.isOffline && this.currentUser?.uuid) {
+          const apiResult = await window.electronAPI.api.selectCape(this.currentUser.uuid, selectedCapeId);
+          
+          if (apiResult.success) {
+            console.log('Cape selected via API:', selectedCapeId);
+          } else {
+            console.warn('API cape selection failed, using local storage:', apiResult.error);
+            await window.electronAPI.settings.set('selectedCape', selectedCapeId);
+          }
+        } else {
+          // Fallback to local storage for offline users
+          await window.electronAPI.settings.set('selectedCape', selectedCapeId);
         }
+
+        if (selectedCapeId === 'none') {
+          this.showNotification('Cape removed!', 'success');
+        } else {
+          // Find the cape details
+          const allCapes = [...document.querySelectorAll('.cape-option[data-cape-id]')];
+          const selectedCape = allCapes.find(cape => cape.dataset.capeId === selectedCapeId);
+          if (selectedCape) {
+            const capeName = selectedCape.querySelector('h4').textContent;
+            this.showNotification(`Applied ${capeName} cape!`, 'success');
+          }
+        }
+        modal.remove();
+      } catch (error) {
+        console.error('Failed to apply cape selection:', error);
+        this.showNotification('Failed to apply cape. Please try again.', 'error');
       }
-      modal.remove();
     } else {
       this.showNotification('Please select a cape first', 'warning');
     }
@@ -2205,7 +2307,7 @@ class YNGClientApp {
     
     if (githubBtn) {
       githubBtn.addEventListener('click', () => {
-        require('electron').shell.openExternal('https://github.com/YNG-CLIENT/YNG-Client');
+        require('electron').shell.openExternal('https://github.com/YNG-Client/Client');
       });
     }
     

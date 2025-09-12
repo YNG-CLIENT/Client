@@ -4,7 +4,7 @@
 # YNG Client 🎮
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux-blue)](https://github.com/YNG-CLIENT/YNG-Client)
+[![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux-blue)](https://github.com/YNG-Client/Client)
 [![Electron](https://img.shields.io/badge/Electron-27.0.0-green)](https://electronjs.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-20.x-brightgreen)](https://nodejs.org/)
 
@@ -55,7 +55,7 @@ YNG Client is a sleek, modern Minecraft launcher built with Electron and Node.js
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/YNG-CLIENT/YNG-Client.git
+   git clone https://github.com/YNG-Client/Client.git
    cd YNG-Client
    ```
 
@@ -156,7 +156,7 @@ YNG Client/
 We welcome contributions from the community! This is a **free, open-source project** built for everyone.
 
 ### How to Contribute
-- 🐛 Report bugs on [GitHub Issues](https://github.com/YNG-CLIENT/YNG-Client/issues)
+- 🐛 Report bugs on [GitHub Issues](https://github.com/YNG-Client/Client/issues)
 - 💡 Suggest features and improvements
 - 🔧 Submit pull requests for bug fixes or new features
 - 📚 Help improve documentation
