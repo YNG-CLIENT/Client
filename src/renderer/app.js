@@ -8,6 +8,7 @@ class YNGClientApp {
     this.neoforgeVersions = [];
     this.currentModLoader = 'vanilla';
     this.settings = {}; // Will be loaded asynchronously
+    this.offlineNameBlacklist = []; // Initialize blacklist
     this.currentScreen = 'login';
     
     this.initializeApp();
@@ -205,21 +206,168 @@ class YNGClientApp {
   }
 
   setupAutoUpdater() {
-    window.electronAPI.updater.onUpdateAvailable(() => {
+    // Handle checking for updates
+    window.electronAPI.updater.onCheckingForUpdate(() => {
+      console.log('Checking for updates...');
+    });
+
+    // Handle update available
+    window.electronAPI.updater.onUpdateAvailable((info) => {
+      console.log('Update available:', info);
       const updateDot = document.querySelector('.update-dot');
       if (updateDot) {
         updateDot.style.background = 'var(--warning)';
       }
-      this.showNotification('Update available! Downloading...', 'info');
+      
+      this.showUpdateAvailableDialog(info);
     });
 
-    window.electronAPI.updater.onUpdateDownloaded(() => {
+    // Handle update not available
+    window.electronAPI.updater.onUpdateNotAvailable((info) => {
+      console.log('No updates available');
+    });
+
+    // Handle download progress
+    window.electronAPI.updater.onDownloadProgress((progress) => {
+      console.log(`Update download progress: ${progress.percent}%`);
+      this.updateDownloadProgress(progress);
+    });
+
+    // Handle update downloaded
+    window.electronAPI.updater.onUpdateDownloaded((info) => {
+      console.log('Update downloaded:', info);
       const updateDot = document.querySelector('.update-dot');
       if (updateDot) {
         updateDot.style.background = 'var(--success)';
       }
-      this.showNotification('Update downloaded! Restart to apply.', 'success');
+      
+      this.showUpdateReadyDialog(info);
     });
+
+    // Handle updater errors
+    window.electronAPI.updater.onError((error) => {
+      console.error('Updater error:', error);
+      this.showNotification('Update failed: ' + error, 'error');
+    });
+  }
+
+  showUpdateAvailableDialog(info) {
+    const updateContainer = document.getElementById('updateStatus');
+    if (!updateContainer) return;
+
+    updateContainer.innerHTML = `
+      <div class="update-available-dialog">
+        <div class="update-header">
+          <i class="fas fa-download"></i>
+          <div>
+            <strong>Update Available!</strong>
+            <div class="update-version">Version ${info.version}</div>
+          </div>
+        </div>
+        <div class="update-actions">
+          <button class="custom-btn primary" onclick="app.downloadUpdate()">
+            <i class="fas fa-download"></i>
+            Download Update
+          </button>
+          <button class="custom-btn secondary" onclick="app.dismissUpdate()">
+            Later
+          </button>
+        </div>
+        <div class="update-progress hidden" id="updateProgress">
+          <div class="progress-bar">
+            <div class="progress-fill" id="updateProgressFill"></div>
+          </div>
+          <div class="progress-text" id="updateProgressText">Downloading...</div>
+        </div>
+      </div>
+    `;
+
+    this.showNotification(`Update v${info.version} is available!`, 'info');
+  }
+
+  showUpdateReadyDialog(info) {
+    const updateContainer = document.getElementById('updateStatus');
+    if (!updateContainer) return;
+
+    updateContainer.innerHTML = `
+      <div class="update-ready-dialog">
+        <div class="update-header">
+          <i class="fas fa-check-circle" style="color: var(--success);"></i>
+          <div>
+            <strong>Update Ready!</strong>
+            <div class="update-version">Version ${info.version} downloaded</div>
+          </div>
+        </div>
+        <div class="update-actions">
+          <button class="custom-btn primary" onclick="app.installUpdate()">
+            <i class="fas fa-sync-alt"></i>
+            Restart & Install
+          </button>
+          <button class="custom-btn secondary" onclick="app.dismissUpdate()">
+            Install Later
+          </button>
+        </div>
+      </div>
+    `;
+
+    this.showNotification('Update ready! Restart to install.', 'success');
+  }
+
+  updateDownloadProgress(progress) {
+    const progressContainer = document.getElementById('updateProgress');
+    const progressFill = document.getElementById('updateProgressFill');
+    const progressText = document.getElementById('updateProgressText');
+
+    if (progressContainer) {
+      progressContainer.classList.remove('hidden');
+    }
+
+    if (progressFill) {
+      progressFill.style.width = `${progress.percent}%`;
+    }
+
+    if (progressText) {
+      const speed = progress.bytesPerSecond ? this.formatBytes(progress.bytesPerSecond) + '/s' : '';
+      const transferred = this.formatBytes(progress.transferred);
+      const total = this.formatBytes(progress.total);
+      progressText.textContent = `Downloading... ${Math.round(progress.percent)}% (${transferred}/${total}) ${speed}`;
+    }
+  }
+
+  async downloadUpdate() {
+    try {
+      const result = await window.electronAPI.updater.downloadUpdate();
+      if (!result.success) {
+        this.showNotification('Failed to download update: ' + result.error, 'error');
+      }
+    } catch (error) {
+      console.error('Failed to download update:', error);
+      this.showNotification('Failed to download update', 'error');
+    }
+  }
+
+  async installUpdate() {
+    try {
+      await window.electronAPI.updater.quitAndInstall();
+    } catch (error) {
+      console.error('Failed to install update:', error);
+      this.showNotification('Failed to install update', 'error');
+    }
+  }
+
+  dismissUpdate() {
+    const updateContainer = document.getElementById('updateStatus');
+    if (updateContainer) {
+      updateContainer.innerHTML = '';
+    }
+  }
+
+  formatBytes(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   }
 
   showLoginInterface() {
@@ -537,14 +685,39 @@ class YNGClientApp {
           launchCountElement.textContent = this.currentUser.launches || 0;
         }
 
-        // Update profile status
+        // Update profile status and badge
         if (profileStatusElement) {
+          const profileBadge = document.querySelector('.profile-badge');
+          const statusIndicator = profileStatusElement.querySelector('.status-indicator');
+          
           if (this.currentUser.isOffline) {
-            profileStatusElement.textContent = 'Offline Player';
-            profileStatusElement.style.color = 'var(--warning)';
+            profileStatusElement.innerHTML = `
+              <span class="status-indicator" style="background: var(--warning); box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.3);"></span>
+              Offline Player
+            `;
+            if (profileBadge) {
+              profileBadge.innerHTML = `
+                <i class="badge-icon">🔒</i>
+                <span class="badge-text">Offline Mode</span>
+              `;
+              profileBadge.style.background = 'linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(251, 191, 36, 0.2))';
+              profileBadge.style.borderColor = 'rgba(245, 158, 11, 0.3)';
+              profileBadge.style.color = 'var(--warning)';
+            }
           } else {
-            profileStatusElement.textContent = 'Minecraft Premium';
-            profileStatusElement.style.color = 'var(--success)';
+            profileStatusElement.innerHTML = `
+              <span class="status-indicator" style="background: var(--success); box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.3);"></span>
+              Premium Player
+            `;
+            if (profileBadge) {
+              profileBadge.innerHTML = `
+                <i class="badge-icon">👑</i>
+                <span class="badge-text">Premium Player</span>
+              `;
+              profileBadge.style.background = 'linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(168, 85, 247, 0.2))';
+              profileBadge.style.borderColor = 'rgba(99, 102, 241, 0.3)';
+              profileBadge.style.color = 'var(--primary-solid)';
+            }
           }
         }
 
@@ -635,7 +808,7 @@ class YNGClientApp {
           
           if (loadResult.success) {
             // Also update vanilla texture
-            const capeTextureUrl = window.electronAPI.api.getCapeTextureUrl(capeId);
+            const capeTextureUrl = await this.getCapeTextureUrlById(capeId);
             await window.electronAPI.capeReplacer.replaceCapeTexture(this.currentUser.id, capeTextureUrl);
             console.log('Selected cape loaded and applied');
           }
@@ -1174,7 +1347,7 @@ class YNGClientApp {
               ...cape,
               type: 'client',
               owned: true,
-              texture: window.electronAPI.api.getCapeTextureUrl(cape.id)
+              texture: cape.textureUrl // Use direct textureUrl from API instead of proxy
             }));
             ownedCapes.push(...apiCapes);
             console.log('Loaded user capes from API:', apiCapes.length);
@@ -1270,6 +1443,32 @@ class YNGClientApp {
     }
   }
 
+  async getCapeTextureUrlById(capeId) {
+    try {
+      // First check user owned capes
+      const userCapes = await this.getUserOwnedCapes();
+      const userCape = userCapes.find(cape => cape.id === capeId);
+      if (userCape && userCape.texture) {
+        return userCape.texture;
+      }
+
+      // Then check client capes
+      const clientCapes = await this.getClientCapes();
+      const clientCape = clientCapes.find(cape => cape.id === capeId);
+      if (clientCape && clientCape.texture) {
+        return clientCape.texture;
+      }
+
+      // Fallback to API proxy method
+      console.warn('Cape texture URL not found in cache, using proxy method for:', capeId);
+      return window.electronAPI.api.getCapeTextureUrl(capeId);
+    } catch (error) {
+      console.error('Failed to get cape texture URL:', error);
+      // Final fallback to proxy method
+      return window.electronAPI.api.getCapeTextureUrl(capeId);
+    }
+  }
+
   async getClientCapes() {
     try {
       // Try to get capes from API first
@@ -1298,7 +1497,7 @@ class YNGClientApp {
               type: 'client',
               unlocked: unlocked,
               unlock_condition: cape.unlockCondition, // Add this for compatibility
-              texture: window.electronAPI.api.getCapeTextureUrl(cape.id)
+              texture: cape.textureUrl // Use direct textureUrl from API instead of proxy
             };
           })
         );
@@ -1501,7 +1700,7 @@ class YNGClientApp {
               console.log('Cape loaded for in-game use:', selectedCapeId);
               
               // Get cape texture URL for vanilla replacement
-              const capeTextureUrl = window.electronAPI.api.getCapeTextureUrl(selectedCapeId);
+              const capeTextureUrl = await this.getCapeTextureUrlById(selectedCapeId);
               
               // Replace cape texture in vanilla Minecraft
               const replaceResult = await window.electronAPI.capeReplacer.replaceCapeTexture(
@@ -2124,10 +2323,83 @@ class YNGClientApp {
   }
 
   initializeSettingsScreen() {
-    // Load current settings
+    // Initialize the modern settings system
     this.loadSettingsIntoUI();
+    this.setupSettingsNavigation();
     this.setupSettingsHandlers();
+    this.loadOfflineNameBlacklist();
+    this.checkForUpdates();
+  }
+
+  setupSettingsNavigation() {
+    const navItems = document.querySelectorAll('.settings-nav-item');
+    const sections = document.querySelectorAll('.settings-section');
+
+    navItems.forEach(item => {
+      item.addEventListener('click', () => {
+        const targetSection = item.dataset.section;
+        
+        // Update nav active state
+        navItems.forEach(nav => nav.classList.remove('active'));
+        item.classList.add('active');
+        
+        // Update section visibility
+        sections.forEach(section => section.classList.remove('active'));
+        const targetSectionEl = document.querySelector(`[data-section="${targetSection}"].settings-section`);
+        if (targetSectionEl) {
+          targetSectionEl.classList.add('active');
+        }
+      });
+    });
+
+    // Activate first section by default
+    if (navItems.length > 0) {
+      navItems[0].click();
+    }
+  }
+
+  setupSettingsHandlers() {
+    // Setup save buttons for each section
+    this.setupSaveButtons();
+    
+    // Setup all toggle switches
+    this.setupToggleSwitches();
+    
+    // Setup memory settings
     this.setupMemorySettings();
+    
+    // Setup directory selectors
+    this.setupDirectorySelectors();
+    
+    // Setup blacklist management
+    this.setupBlacklistManagement();
+    
+    // Setup update checking
+    this.setupUpdateHandlers();
+    
+    // Setup reset actions
+    this.setupResetActions();
+  }
+
+  setupSaveButtons() {
+    const saveButtons = document.querySelectorAll('.save-btn');
+    saveButtons.forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const section = e.target.closest('.settings-section');
+        await this.saveSettingsSection(section);
+      });
+    });
+  }
+
+  setupToggleSwitches() {
+    const toggles = document.querySelectorAll('.custom-checkbox');
+    toggles.forEach(toggle => {
+      toggle.addEventListener('change', (e) => {
+        const settingKey = e.target.id;
+        this.settings[settingKey] = e.target.checked;
+        console.log(`Setting ${settingKey} changed to:`, e.target.checked);
+      });
+    });
   }
 
   setupMemorySettings() {
@@ -2151,12 +2423,13 @@ class YNGClientApp {
       };
 
       // Initial display
-      updateMemoryDisplay(memorySlider.value);
+      updateMemoryDisplay(memorySlider.value || this.settings.memory || 2048);
 
       // Slider change event
       memorySlider.addEventListener('input', (e) => {
-        updateMemoryDisplay(e.target.value);
-        this.settings.memory = parseInt(e.target.value);
+        const value = parseInt(e.target.value);
+        updateMemoryDisplay(value);
+        this.settings.memory = value;
       });
 
       // Preset button events
@@ -2171,48 +2444,497 @@ class YNGClientApp {
     }
   }
 
-  setupSettingsHandlers() {
-    const saveBtn = document.getElementById('saveSettings');
-    const resetBtn = document.getElementById('resetSettings');
-    const selectDirBtn = document.getElementById('selectGameDirectory');
-    
-    if (saveBtn) {
-      saveBtn.addEventListener('click', () => this.saveSettings());
+  setupDirectorySelectors() {
+    // Game directory selector
+    const selectGameDir = document.getElementById('selectGameDirectory');
+    if (selectGameDir) {
+      selectGameDir.addEventListener('click', async () => {
+        try {
+          const folder = await window.electronAPI.app.selectFolder();
+          if (folder) {
+            this.settings.gameDirectory = folder;
+            const input = document.getElementById('gameDirectoryInput');
+            if (input) input.value = folder;
+          }
+        } catch (error) {
+          this.showNotification('Failed to select directory', 'error');
+        }
+      });
     }
-    
-    if (resetBtn) {
-      resetBtn.addEventListener('click', () => this.resetSettings());
-    }
-    
-    if (selectDirBtn) {
-      selectDirBtn.addEventListener('click', () => this.selectGameDirectory());
+
+    // Java executable selector
+    const selectJava = document.getElementById('selectJavaPath');
+    if (selectJava) {
+      selectJava.addEventListener('click', async () => {
+        try {
+          const javaPath = await window.electronAPI.app.selectFile('Select Java Executable', [
+            { name: 'Java Executable', extensions: ['exe'] },
+            { name: 'All Files', extensions: ['*'] }
+          ]);
+          if (javaPath) {
+            this.settings.javaPath = javaPath;
+            const input = document.getElementById('javaPathInput');
+            if (input) input.value = javaPath;
+          }
+        } catch (error) {
+          this.showNotification('Failed to select Java executable', 'error');
+        }
+      });
     }
   }
 
-  async selectGameDirectory() {
+  setupBlacklistManagement() {
+    const addBlacklistBtn = document.getElementById('addBlacklist');
+    const blacklistInput = document.getElementById('blacklistInput');
+    const blacklistType = document.getElementById('blacklistType');
+
+    if (addBlacklistBtn && blacklistInput && blacklistType) {
+      addBlacklistBtn.addEventListener('click', () => {
+        const name = blacklistInput.value.trim();
+        const type = blacklistType.value;
+        
+        if (name) {
+          this.addToBlacklist(name, type);
+          blacklistInput.value = '';
+        }
+      });
+
+      blacklistInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          addBlacklistBtn.click();
+        }
+      });
+    }
+  }
+
+  setupUpdateHandlers() {
+    const checkUpdatesBtn = document.getElementById('checkUpdates');
+    if (checkUpdatesBtn) {
+      checkUpdatesBtn.addEventListener('click', () => {
+        this.checkForUpdates(true);
+      });
+    }
+  }
+
+  setupResetActions() {
+    const resetSettingsBtn = document.getElementById('resetAllSettings');
+    const resetBlacklistBtn = document.getElementById('resetBlacklist');
+    const clearCacheBtn = document.getElementById('clearCache');
+
+    if (resetSettingsBtn) {
+      resetSettingsBtn.addEventListener('click', () => {
+        this.showConfirmDialog(
+          'Reset All Settings',
+          'Are you sure you want to reset all settings to default? This cannot be undone.',
+          () => this.resetAllSettings()
+        );
+      });
+    }
+
+    if (resetBlacklistBtn) {
+      resetBlacklistBtn.addEventListener('click', () => {
+        this.showConfirmDialog(
+          'Reset Blacklist',
+          'Are you sure you want to clear the entire offline name blacklist?',
+          () => this.resetBlacklist()
+        );
+      });
+    }
+
+    if (clearCacheBtn) {
+      clearCacheBtn.addEventListener('click', () => {
+        this.showConfirmDialog(
+          'Clear Cache',
+          'This will clear all cached game files and require re-downloading. Continue?',
+          () => this.clearGameCache()
+        );
+      });
+    }
+  }
+
+  async saveSettingsSection(section) {
     try {
-      const folder = await window.electronAPI.app.selectFolder();
-      if (folder) {
-        this.settings.gameDirectory = folder;
-        const input = document.getElementById('gameDirectoryInput');
-        if (input) input.value = folder;
+      const sectionName = section.id;
+      const saveBtn = section.querySelector('.save-btn');
+      
+      // Get all form elements in this section
+      const inputs = section.querySelectorAll('input, select, textarea');
+      inputs.forEach(input => {
+        const key = input.id || input.name;
+        if (key && this.settings.hasOwnProperty(key)) {
+          if (input.type === 'checkbox') {
+            this.settings[key] = input.checked;
+          } else if (input.type === 'number' || input.type === 'range') {
+            this.settings[key] = parseInt(input.value) || 0;
+          } else {
+            this.settings[key] = input.value;
+          }
+        }
+      });
+
+      // Save all settings
+      await this.saveSettings();
+      
+      // Visual feedback
+      if (saveBtn) {
+        const originalText = saveBtn.innerHTML;
+        saveBtn.innerHTML = '<i class="fas fa-check"></i> Saved!';
+        saveBtn.classList.add('saved');
+        
+        setTimeout(() => {
+          saveBtn.innerHTML = originalText;
+          saveBtn.classList.remove('saved');
+        }, 2000);
       }
     } catch (error) {
-      this.showNotification('Failed to select directory', 'error');
+      console.error('Failed to save settings section:', error);
+      this.showNotification('Failed to save settings', 'error');
     }
   }
 
-  resetSettings() {
-    this.settings = {
+  async loadOfflineNameBlacklist() {
+    try {
+      this.offlineNameBlacklist = await window.electronAPI.settings.get('offlineNameBlacklist') || [];
+      this.updateBlacklistDisplay();
+    } catch (error) {
+      console.error('Failed to load blacklist:', error);
+      this.offlineNameBlacklist = [];
+    }
+  }
+
+  addToBlacklist(name, type = 'exact') {
+    if (!name.trim()) return;
+    
+    // Check if already exists
+    const exists = this.offlineNameBlacklist.some(item => 
+      item.name === name && item.type === type
+    );
+    
+    if (exists) {
+      this.showNotification('Name already in blacklist', 'warning');
+      return;
+    }
+
+    // Validate regex if type is regex
+    if (type === 'regex') {
+      try {
+        new RegExp(name);
+      } catch (error) {
+        this.showNotification('Invalid regex pattern', 'error');
+        return;
+      }
+    }
+
+    this.offlineNameBlacklist.push({ name, type, added: Date.now() });
+    this.updateBlacklistDisplay();
+    this.saveBlacklist();
+    this.showNotification('Added to blacklist', 'success');
+  }
+
+  removeFromBlacklist(index) {
+    if (index >= 0 && index < this.offlineNameBlacklist.length) {
+      this.offlineNameBlacklist.splice(index, 1);
+      this.updateBlacklistDisplay();
+      this.saveBlacklist();
+      this.showNotification('Removed from blacklist', 'success');
+    }
+  }
+
+  updateBlacklistDisplay() {
+    const blacklistContainer = document.getElementById('blacklistItems');
+    if (!blacklistContainer) return;
+
+    if (this.offlineNameBlacklist.length === 0) {
+      blacklistContainer.innerHTML = `
+        <div style="text-align: center; padding: 20px; color: var(--text-secondary);">
+          <i class="fas fa-shield-alt" style="font-size: 2rem; margin-bottom: 8px; opacity: 0.5;"></i>
+          <p>No blacklisted names</p>
+        </div>
+      `;
+      return;
+    }
+
+    const html = `
+      <div class="blacklist-header">
+        <div>Name/Pattern</div>
+        <div>Type</div>
+        <div>Actions</div>
+      </div>
+      ${this.offlineNameBlacklist.map((item, index) => `
+        <div class="blacklist-item">
+          <div class="blacklist-name">${this.escapeHtml(item.name)}</div>
+          <div>
+            <span class="blacklist-type-badge ${item.type}">${item.type.toUpperCase()}</span>
+          </div>
+          <div class="blacklist-actions">
+            <button class="remove-blacklist-btn" onclick="app.removeFromBlacklist(${index})">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        </div>
+      `).join('')}
+    `;
+
+    blacklistContainer.innerHTML = html;
+  }
+
+  async saveBlacklist() {
+    try {
+      await window.electronAPI.settings.set('offlineNameBlacklist', this.offlineNameBlacklist);
+    } catch (error) {
+      console.error('Failed to save blacklist:', error);
+    }
+  }
+
+  isNameBlacklisted(username) {
+    if (!this.offlineNameBlacklist || this.offlineNameBlacklist.length === 0) {
+      return false;
+    }
+
+    // Check default blocked names (hardcoded)
+    const defaultBlocked = ['admin', 'administrator', 'root', 'system', 'console', 'notch', 'mojang', 'minecraft'];
+    if (defaultBlocked.includes(username.toLowerCase())) {
+      return true;
+    }
+
+    // Check custom blacklist
+    return this.offlineNameBlacklist.some(item => {
+      if (item.type === 'exact') {
+        return item.name.toLowerCase() === username.toLowerCase();
+      } else if (item.type === 'regex') {
+        try {
+          const regex = new RegExp(item.name, 'i');
+          return regex.test(username);
+        } catch (error) {
+          console.error('Invalid regex in blacklist:', item.name);
+          return false;
+        }
+      }
+      return false;
+    });
+  }
+
+  async checkForUpdates(manual = false) {
+    try {
+      const updateStatus = document.getElementById('updateStatus');
+      const checkBtn = document.getElementById('checkUpdatesBtn');
+      
+      if (updateStatus) {
+        updateStatus.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking for updates...';
+      }
+
+      if (checkBtn) {
+        checkBtn.disabled = true;
+      }
+
+      // Use the new electron-updater system
+      const result = await window.electronAPI.updater.checkForUpdates();
+      
+      if (result.success) {
+        if (manual && updateStatus) {
+          updateStatus.innerHTML = `
+            <div class="update-status">
+              <i class="fas fa-search"></i>
+              <div>
+                <strong>Checking Complete</strong>
+                <div class="status-text">Check finished - results will appear above if update available</div>
+              </div>
+            </div>
+          `;
+        }
+        
+        if (manual) {
+          this.showNotification('Update check completed', 'success');
+        }
+      } else {
+        // Fallback to GitHub API if electron-updater fails
+        await this.checkForUpdatesManual(manual);
+      }
+
+    } catch (error) {
+      console.error('Failed to check for updates:', error);
+      // Fallback to manual check
+      await this.checkForUpdatesManual(manual);
+    } finally {
+      const checkBtn = document.getElementById('checkUpdatesBtn');
+      if (checkBtn) {
+        checkBtn.disabled = false;
+      }
+    }
+  }
+
+  async checkForUpdatesManual(manual = false) {
+    try {
+      const updateStatus = document.getElementById('updateStatus');
+      
+      // Fallback: Check GitHub releases manually
+      const currentVersion = await window.electronAPI.app.getVersion();
+      const response = await fetch('https://api.github.com/repos/YNG-Client/Client/releases/latest');
+      const latestRelease = await response.json();
+      
+      const latestVersion = latestRelease.tag_name.replace('v', '');
+      const isNewer = this.compareVersions(latestVersion, currentVersion) > 0;
+
+      if (updateStatus) {
+        if (isNewer) {
+          updateStatus.innerHTML = `
+            <div class="update-available">
+              <i class="fas fa-download"></i>
+              <div>
+                <strong>Update Available!</strong>
+                <div class="status-text">Version ${latestVersion} is available (Manual Download)</div>
+              </div>
+              <button class="custom-btn primary" onclick="app.openUpdateURL('${latestRelease.html_url}')">
+                Download from GitHub
+              </button>
+            </div>
+          `;
+        } else {
+          updateStatus.innerHTML = `
+            <div class="update-status">
+              <i class="fas fa-check-circle" style="color: var(--success);"></i>
+              <div>
+                <strong>Up to Date</strong>
+                <div class="status-text">You have the latest version (${currentVersion})</div>
+              </div>
+            </div>
+          `;
+        }
+      }
+
+      if (manual) {
+        this.showNotification(
+          isNewer ? 'Update available! (Manual download required)' : 'You have the latest version',
+          isNewer ? 'info' : 'success'
+        );
+      }
+
+    } catch (error) {
+      console.error('Manual update check failed:', error);
+      const updateStatus = document.getElementById('updateStatus');
+      if (updateStatus) {
+        updateStatus.innerHTML = `
+          <div class="update-status">
+            <i class="fas fa-exclamation-triangle" style="color: var(--warning);"></i>
+            <div>
+              <strong>Check Failed</strong>
+              <div class="status-text">Unable to check for updates</div>
+            </div>
+          </div>
+        `;
+      }
+      
+      if (manual) {
+        this.showNotification('Failed to check for updates', 'error');
+      }
+    }
+  }
+
+  openUpdateURL(url) {
+    window.electronAPI.app.openExternal(url);
+  }
+
+  compareVersions(a, b) {
+    const aParts = a.split('.').map(Number);
+    const bParts = b.split('.').map(Number);
+    
+    for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
+      const aPart = aParts[i] || 0;
+      const bPart = bParts[i] || 0;
+      
+      if (aPart > bPart) return 1;
+      if (aPart < bPart) return -1;
+    }
+    
+    return 0;
+  }
+
+  downloadUpdate(url) {
+    window.electronAPI.app.openExternal(url);
+  }
+
+  async resetAllSettings() {
+    try {
+      this.settings = this.getDefaultSettings();
+      await this.saveSettings();
+      this.loadSettingsIntoUI();
+      this.showNotification('All settings reset to default', 'success');
+    } catch (error) {
+      console.error('Failed to reset settings:', error);
+      this.showNotification('Failed to reset settings', 'error');
+    }
+  }
+
+  async resetBlacklist() {
+    try {
+      this.offlineNameBlacklist = [];
+      await this.saveBlacklist();
+      this.updateBlacklistDisplay();
+      this.showNotification('Blacklist cleared', 'success');
+    } catch (error) {
+      console.error('Failed to reset blacklist:', error);
+      this.showNotification('Failed to reset blacklist', 'error');
+    }
+  }
+
+  async clearGameCache() {
+    try {
+      await window.electronAPI.minecraft.clearCache();
+      this.showNotification('Cache cleared successfully', 'success');
+    } catch (error) {
+      console.error('Failed to clear cache:', error);
+      this.showNotification('Failed to clear cache', 'error');
+    }
+  }
+
+  getDefaultSettings() {
+    return {
+      // General Settings
+      autoUpdate: true,
+      closeAfterLaunch: false,
+      minimizeToTray: true,
+      
+      // Game Settings
       memory: 2048,
-      javaArgs: [],
       gameDirectory: null,
-      keepLauncherOpen: true,
+      javaPath: null,
+      javaArgs: '',
+      fullscreen: false,
+      windowWidth: 854,
+      windowHeight: 480,
+      
+      // Security Settings
+      allowMultipleInstances: false,
+      enableConsole: false,
+      
+      // Performance Settings
+      optimizeForPerformance: true,
+      reducedMotion: false,
+      lowResourceMode: false,
+      
+      // Advanced Settings
       showSnapshots: false,
-      showBetas: false
+      showBetas: false,
+      discordRPC: true,
+      showServerInfo: true,
+      showCoordinates: false,
+      developerMode: false,
+      debugLogging: false,
+      experimentalFeatures: false
     };
-    this.loadSettingsIntoUI();
-    this.saveSettings();
+  }
+
+  showConfirmDialog(title, message, onConfirm) {
+    // Create a simple confirm dialog (you can enhance this with a custom modal)
+    if (confirm(`${title}\n\n${message}`)) {
+      onConfirm();
+    }
+  }
+
+  escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
   }
 
   async initializeStatsScreen() {
@@ -2558,12 +3280,10 @@ class YNGClientApp {
       if (result.success) {
         this.showNotification('Minecraft launched successfully!', 'success');
         
-        // Update launch count and last played
-        if (this.currentUser.isOffline) {
-          this.currentUser.launches = (this.currentUser.launches || 0) + 1;
-          this.currentUser.lastPlayed = new Date().toISOString();
-          this.updateUserStats();
-        }
+        // Update launch count and last played for all users
+        this.currentUser.launches = (this.currentUser.launches || 0) + 1;
+        this.currentUser.lastPlayed = new Date().toISOString();
+        this.updateUserStats();
         
         // Set Discord RPC to game mode
         await window.electronAPI.discord.setGameActivity({
@@ -2647,71 +3367,80 @@ class YNGClientApp {
   }
 
   loadSettingsIntoUI() {
-    // Load settings into the settings screen UI
-    const settingsMap = {
-      'defaultMemory': { type: 'range', key: 'memory' },
-      'gameDirectoryInput': { type: 'text', key: 'gameDirectory' },
-      'autoUpdate': { type: 'checkbox', key: 'autoUpdate' },
-      'closeAfterLaunch': { type: 'checkbox', key: 'closeAfterLaunch' },
-      'minimizeToTray': { type: 'checkbox', key: 'minimizeToTray' },
-      'enableConsole': { type: 'checkbox', key: 'enableConsole' },
-      'fullscreen': { type: 'checkbox', key: 'fullscreen' },
-      'allowMultipleInstances': { type: 'checkbox', key: 'allowMultipleInstances' },
-      'discordRPC': { type: 'checkbox', key: 'discordRPC' },
-      'showServerInfo': { type: 'checkbox', key: 'showServerInfo' },
-      'showCoordinates': { type: 'checkbox', key: 'showCoordinates' },
-      'windowWidth': { type: 'number', key: 'windowWidth' },
-      'windowHeight': { type: 'number', key: 'windowHeight' }
-    };
-
-    // Load all settings into UI
-    Object.entries(settingsMap).forEach(([elementId, config]) => {
-      const element = document.getElementById(elementId);
-      if (element && this.settings[config.key] !== undefined) {
-        switch (config.type) {
-          case 'checkbox':
-            element.checked = this.settings[config.key];
-            break;
-          case 'text':
-          case 'number':
-          case 'range':
-            element.value = this.settings[config.key];
-            break;
-        }
-      }
-    });
-
-    // Special handling for memory display
-    const memoryValue = document.getElementById('defaultMemoryValue');
-    if (memoryValue && this.settings.memory) {
-      const gb = Math.round(this.settings.memory / 1024 * 10) / 10;
-      memoryValue.textContent = `${gb}GB`;
+    if (!this.settings) {
+      this.settings = this.getDefaultSettings();
     }
 
-    // Setup event listeners for all settings
-    Object.entries(settingsMap).forEach(([elementId, config]) => {
-      const element = document.getElementById(elementId);
-      if (element) {
-        element.addEventListener('change', (e) => {
-          let value = e.target.value;
-          if (config.type === 'checkbox') {
-            value = e.target.checked;
-          } else if (config.type === 'number' || config.type === 'range') {
-            value = parseInt(value) || 0;
-          }
-          this.settings[config.key] = value;
-          
-          // Special handling for memory display update
-          if (config.key === 'memory') {
-            const memoryValue = document.getElementById('defaultMemoryValue');
-            if (memoryValue) {
-              const gb = Math.round(value / 1024 * 10) / 10;
-              memoryValue.textContent = `${gb}GB`;
-            }
-          }
-        });
+    // Load all form controls with their corresponding settings
+    const formElements = document.querySelectorAll('#settingsScreen input, #settingsScreen select, #settingsScreen textarea');
+    
+    formElements.forEach(element => {
+      const settingKey = element.id || element.name;
+      if (!settingKey || this.settings[settingKey] === undefined) return;
+
+      const value = this.settings[settingKey];
+
+      if (element.type === 'checkbox') {
+        element.checked = Boolean(value);
+      } else if (element.type === 'radio') {
+        element.checked = (element.value === String(value));
+      } else if (element.type === 'range' || element.type === 'number') {
+        element.value = Number(value) || 0;
+      } else {
+        element.value = String(value || '');
       }
     });
+
+    // Update memory display
+    this.updateMemoryDisplay();
+    
+    // Update any dependent UI elements
+    this.updateSettingsUI();
+  }
+
+  updateMemoryDisplay() {
+    const memorySlider = document.getElementById('defaultMemory');
+    const memoryValue = document.getElementById('defaultMemoryValue');
+    
+    if (memorySlider && memoryValue) {
+      const memory = this.settings.memory || 2048;
+      memorySlider.value = memory;
+      const gb = Math.round(memory / 1024 * 10) / 10;
+      memoryValue.textContent = `${gb}GB`;
+      
+      // Update preset buttons
+      const presetButtons = document.querySelectorAll('.preset-btn');
+      presetButtons.forEach(btn => {
+        btn.classList.remove('active');
+        if (parseInt(btn.dataset.memory) === memory) {
+          btn.classList.add('active');
+        }
+      });
+    }
+  }
+
+  updateSettingsUI() {
+    // Update update channel dropdown
+    const updateChannel = document.getElementById('updateChannel');
+    if (updateChannel) {
+      updateChannel.value = this.settings.updateChannel || 'stable';
+    }
+
+    // Update resolution inputs
+    const windowWidth = document.getElementById('windowWidth');
+    const windowHeight = document.getElementById('windowHeight');
+    if (windowWidth) windowWidth.value = this.settings.windowWidth || 854;
+    if (windowHeight) windowHeight.value = this.settings.windowHeight || 480;
+
+    // Update directory inputs
+    const gameDir = document.getElementById('gameDirectoryInput');
+    if (gameDir) gameDir.value = this.settings.gameDirectory || '';
+
+    const javaPath = document.getElementById('javaPathInput');
+    if (javaPath) javaPath.value = this.settings.javaPath || '';
+
+    const javaArgs = document.getElementById('javaArgs');
+    if (javaArgs) javaArgs.value = this.settings.javaArgs || '';
   }
 
   loadAboutInfo() {

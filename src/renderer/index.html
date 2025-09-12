@@ -167,24 +167,46 @@
                 <!-- User Profile Section -->
                 <div class="user-profile-section">
                     <div class="profile-card">
-                        <div class="profile-avatar">
-                            <div id="userSkin" class="skin-container">
-                                <img id="skinImage" src="" alt="User Skin" class="skin-image">
-                                <div class="skin-overlay"></div>
-                            </div>
-                            <div class="online-indicator"></div>
+                        <div class="profile-background">
+                            <div class="profile-gradient"></div>
                         </div>
-                        <div class="profile-info">
-                            <h2 id="username" class="profile-name">Loading...</h2>
-                            <p class="profile-status">Minecraft Player</p>
-                            <div class="profile-stats">
-                                <div class="stat-item">
-                                    <span class="stat-value" id="playTime">0h</span>
-                                    <span class="stat-label">Play Time</span>
+                        <div class="profile-content">
+                            <div class="profile-avatar">
+                                <div id="userSkin" class="skin-container">
+                                    <img id="skinImage" src="" alt="User Skin" class="skin-image">
+                                    <div class="skin-overlay"></div>
                                 </div>
-                                <div class="stat-item">
-                                    <span class="stat-value" id="launchCount">0</span>
-                                    <span class="stat-label">Launches</span>
+                                <div class="online-indicator">
+                                    <div class="indicator-pulse"></div>
+                                </div>
+                            </div>
+                            <div class="profile-info">
+                                <div class="profile-header">
+                                    <h2 id="username" class="profile-name">Loading...</h2>
+                                    <div class="profile-badge">
+                                        <i class="badge-icon">👑</i>
+                                        <span class="badge-text">Premium Player</span>
+                                    </div>
+                                </div>
+                                <p class="profile-status">
+                                    <span class="status-indicator"></span>
+                                    Minecraft Player
+                                </p>
+                                <div class="profile-stats">
+                                    <div class="stat-item">
+                                        <div class="stat-icon">⏱️</div>
+                                        <div class="stat-content">
+                                            <span class="stat-value" id="playTime">0h</span>
+                                            <span class="stat-label">Play Time</span>
+                                        </div>
+                                    </div>
+                                    <div class="stat-item">
+                                        <div class="stat-icon">🚀</div>
+                                        <div class="stat-content">
+                                            <span class="stat-value" id="launchCount">0</span>
+                                            <span class="stat-label">Launches</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -515,9 +537,17 @@
                                 <i>⚙️</i>
                                 <span>General</span>
                             </div>
+                            <div class="settings-nav-item" data-section="updates">
+                                <i>🔄</i>
+                                <span>Updates</span>
+                            </div>
                             <div class="settings-nav-item" data-section="game">
                                 <i>🎮</i>
                                 <span>Game</span>
+                            </div>
+                            <div class="settings-nav-item" data-section="security">
+                                <i>🔒</i>
+                                <span>Security</span>
                             </div>
                             <div class="settings-nav-item" data-section="performance">
                                 <i>⚡</i>
@@ -531,40 +561,53 @@
                     </div>
 
                     <div class="settings-content">
+                        <!-- General Settings -->
                         <div class="settings-section active" data-section="general">
-                            <h3>General Settings</h3>
+                            <div class="section-header">
+                                <h3>General Settings</h3>
+                                <button class="save-btn" data-section="general">
+                                    <i>💾</i>
+                                    Save Changes
+                                </button>
+                            </div>
                             
                             <div class="setting-group">
                                 <h4>Launcher Behavior</h4>
                                 <div class="setting-item">
-                                    <label class="setting-toggle">
-                                        <input type="checkbox" id="autoUpdate">
-                                        <span class="toggle-slider"></span>
-                                        <div class="setting-info">
-                                            <span class="setting-title">Auto-update launcher</span>
-                                            <span class="setting-desc">Automatically download and install launcher updates</span>
-                                        </div>
-                                    </label>
-                                </div>
-                                <div class="setting-item">
-                                    <label class="setting-toggle">
-                                        <input type="checkbox" id="closeAfterLaunch">
-                                        <span class="toggle-slider"></span>
+                                    <div class="custom-toggle">
+                                        <input type="checkbox" id="closeAfterLaunch" class="custom-checkbox">
+                                        <label for="closeAfterLaunch" class="toggle-label">
+                                            <span class="toggle-switch"></span>
+                                        </label>
                                         <div class="setting-info">
                                             <span class="setting-title">Close launcher after game starts</span>
                                             <span class="setting-desc">Minimize system resource usage while playing</span>
                                         </div>
-                                    </label>
+                                    </div>
                                 </div>
                                 <div class="setting-item">
-                                    <label class="setting-toggle">
-                                        <input type="checkbox" id="minimizeToTray">
-                                        <span class="toggle-slider"></span>
+                                    <div class="custom-toggle">
+                                        <input type="checkbox" id="minimizeToTray" class="custom-checkbox">
+                                        <label for="minimizeToTray" class="toggle-label">
+                                            <span class="toggle-switch"></span>
+                                        </label>
                                         <div class="setting-info">
                                             <span class="setting-title">Minimize to system tray</span>
                                             <span class="setting-desc">Keep launcher running in background</span>
                                         </div>
-                                    </label>
+                                    </div>
+                                </div>
+                                <div class="setting-item">
+                                    <div class="custom-toggle">
+                                        <input type="checkbox" id="startOnBoot" class="custom-checkbox">
+                                        <label for="startOnBoot" class="toggle-label">
+                                            <span class="toggle-switch"></span>
+                                        </label>
+                                        <div class="setting-info">
+                                            <span class="setting-title">Start with Windows</span>
+                                            <span class="setting-desc">Automatically start launcher when computer boots</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -574,83 +617,172 @@
                                     <div class="directory-setting">
                                         <label class="setting-label">Minecraft Directory</label>
                                         <div class="directory-selector">
-                                            <input type="text" id="gameDirectory" class="directory-input" readonly>
-                                            <button id="selectDirectory" class="directory-btn">Browse</button>
+                                            <input type="text" id="gameDirectory" class="custom-input" readonly>
+                                            <button id="selectDirectory" class="custom-btn secondary">
+                                                <i>📁</i>
+                                                Browse
+                                            </button>
                                         </div>
                                         <p class="setting-desc">Choose where Minecraft files are stored</p>
                                     </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="settings-section" data-section="game">
-                            <h3>Game Settings</h3>
-                            
-                            <div class="setting-group">
-                                <h4>Launch Options</h4>
-                                <div class="setting-item">
-                                    <label class="setting-toggle">
-                                        <input type="checkbox" id="enableConsole">
-                                        <span class="toggle-slider"></span>
-                                        <div class="setting-info">
-                                            <span class="setting-title">Show game console</span>
-                                            <span class="setting-desc">Display the Minecraft console window for debugging</span>
-                                        </div>
-                                    </label>
-                                </div>
-                                <div class="setting-item">
-                                    <label class="setting-toggle">
-                                        <input type="checkbox" id="fullscreen">
-                                        <span class="toggle-slider"></span>
-                                        <div class="setting-info">
-                                            <span class="setting-title">Start in fullscreen</span>
-                                            <span class="setting-desc">Launch Minecraft in fullscreen mode</span>
-                                        </div>
-                                    </label>
-                                </div>
-                                <div class="setting-item">
-                                    <label class="setting-toggle">
-                                        <input type="checkbox" id="allowMultipleInstances">
-                                        <span class="toggle-slider"></span>
-                                        <div class="setting-info">
-                                            <span class="setting-title">Allow multiple instances</span>
-                                            <span class="setting-desc">Enable launching multiple Minecraft instances on the same account</span>
-                                        </div>
-                                    </label>
                                 </div>
                             </div>
 
                             <div class="setting-group">
                                 <h4>Discord Integration</h4>
                                 <div class="setting-item">
-                                    <label class="setting-toggle">
-                                        <input type="checkbox" id="discordRPC" checked>
-                                        <span class="toggle-slider"></span>
+                                    <div class="custom-toggle">
+                                        <input type="checkbox" id="discordRPC" class="custom-checkbox" checked>
+                                        <label for="discordRPC" class="toggle-label">
+                                            <span class="toggle-switch"></span>
+                                        </label>
                                         <div class="setting-info">
                                             <span class="setting-title">Discord Rich Presence</span>
                                             <span class="setting-desc">Show your Minecraft activity on Discord</span>
                                         </div>
-                                    </label>
+                                    </div>
                                 </div>
                                 <div class="setting-item">
-                                    <label class="setting-toggle">
-                                        <input type="checkbox" id="showServerInfo" checked>
-                                        <span class="toggle-slider"></span>
+                                    <div class="custom-toggle">
+                                        <input type="checkbox" id="showServerInfo" class="custom-checkbox" checked>
+                                        <label for="showServerInfo" class="toggle-label">
+                                            <span class="toggle-switch"></span>
+                                        </label>
                                         <div class="setting-info">
                                             <span class="setting-title">Show server information</span>
                                             <span class="setting-desc">Display server name and player count in Discord</span>
                                         </div>
-                                    </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Updates Settings -->
+                        <div class="settings-section" data-section="updates">
+                            <div class="section-header">
+                                <h3>Update Settings</h3>
+                                <button class="save-btn" data-section="updates">
+                                    <i>💾</i>
+                                    Save Changes
+                                </button>
+                            </div>
+                            
+                            <div class="setting-group">
+                                <h4>Automatic Updates</h4>
+                                <div class="setting-item">
+                                    <div class="custom-toggle">
+                                        <input type="checkbox" id="autoUpdate" class="custom-checkbox" checked>
+                                        <label for="autoUpdate" class="toggle-label">
+                                            <span class="toggle-switch"></span>
+                                        </label>
+                                        <div class="setting-info">
+                                            <span class="setting-title">Auto-update launcher</span>
+                                            <span class="setting-desc">Automatically download and install launcher updates</span>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="setting-item">
-                                    <label class="setting-toggle">
-                                        <input type="checkbox" id="showCoordinates">
-                                        <span class="toggle-slider"></span>
+                                    <div class="custom-toggle">
+                                        <input type="checkbox" id="betaUpdates" class="custom-checkbox">
+                                        <label for="betaUpdates" class="toggle-label">
+                                            <span class="toggle-switch"></span>
+                                        </label>
                                         <div class="setting-info">
-                                            <span class="setting-title">Show coordinates</span>
-                                            <span class="setting-desc">Display your world coordinates in Discord (singleplayer only)</span>
+                                            <span class="setting-title">Beta Updates</span>
+                                            <span class="setting-desc">Receive pre-release launcher updates</span>
                                         </div>
-                                    </label>
+                                    </div>
+                                </div>
+                                <div class="setting-item">
+                                    <div class="custom-toggle">
+                                        <input type="checkbox" id="notifyUpdates" class="custom-checkbox" checked>
+                                        <label for="notifyUpdates" class="toggle-label">
+                                            <span class="toggle-switch"></span>
+                                        </label>
+                                        <div class="setting-info">
+                                            <span class="setting-title">Update notifications</span>
+                                            <span class="setting-desc">Show notifications when updates are available</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="setting-group">
+                                <h4>Update Channel</h4>
+                                <div class="setting-item">
+                                    <div class="select-setting">
+                                        <label class="setting-label">Update Source</label>
+                                        <div class="custom-select">
+                                            <select id="updateChannel" class="custom-dropdown">
+                                                <option value="stable">Stable (Recommended)</option>
+                                                <option value="beta">Beta</option>
+                                                <option value="dev">Development</option>
+                                            </select>
+                                        </div>
+                                        <p class="setting-desc">Choose which update channel to receive updates from</p>
+                                    </div>
+                                </div>
+                                <div class="setting-item">
+                                    <div class="update-actions">
+                                        <button class="custom-btn primary" id="checkUpdatesBtn">
+                                            <i>🔍</i>
+                                            Check for Updates
+                                        </button>
+                                        <div class="update-status" id="updateStatus">
+                                            <span class="status-text">Last checked: Never</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Game Settings -->
+                        <div class="settings-section" data-section="game">
+                            <div class="section-header">
+                                <h3>Game Settings</h3>
+                                <button class="save-btn" data-section="game">
+                                    <i>💾</i>
+                                    Save Changes
+                                </button>
+                            </div>
+                            
+                            <div class="setting-group">
+                                <h4>Launch Options</h4>
+                                <div class="setting-item">
+                                    <div class="custom-toggle">
+                                        <input type="checkbox" id="enableConsole" class="custom-checkbox">
+                                        <label for="enableConsole" class="toggle-label">
+                                            <span class="toggle-switch"></span>
+                                        </label>
+                                        <div class="setting-info">
+                                            <span class="setting-title">Show game console</span>
+                                            <span class="setting-desc">Display the Minecraft console window for debugging</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="setting-item">
+                                    <div class="custom-toggle">
+                                        <input type="checkbox" id="fullscreen" class="custom-checkbox">
+                                        <label for="fullscreen" class="toggle-label">
+                                            <span class="toggle-switch"></span>
+                                        </label>
+                                        <div class="setting-info">
+                                            <span class="setting-title">Start in fullscreen</span>
+                                            <span class="setting-desc">Launch Minecraft in fullscreen mode</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="setting-item">
+                                    <div class="custom-toggle">
+                                        <input type="checkbox" id="allowMultipleInstances" class="custom-checkbox">
+                                        <label for="allowMultipleInstances" class="toggle-label">
+                                            <span class="toggle-switch"></span>
+                                        </label>
+                                        <div class="setting-info">
+                                            <span class="setting-title">Allow multiple instances</span>
+                                            <span class="setting-desc">Enable launching multiple Minecraft instances</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -660,9 +792,9 @@
                                     <div class="resolution-setting">
                                         <label class="setting-label">Game Resolution</label>
                                         <div class="resolution-inputs">
-                                            <input type="number" id="windowWidth" placeholder="1920" min="640" max="7680">
-                                            <span>×</span>
-                                            <input type="number" id="windowHeight" placeholder="1080" min="480" max="4320">
+                                            <input type="number" id="windowWidth" class="custom-input" placeholder="1920" min="640" max="7680">
+                                            <span class="resolution-separator">×</span>
+                                            <input type="number" id="windowHeight" class="custom-input" placeholder="1080" min="480" max="4320">
                                         </div>
                                         <p class="setting-desc">Set custom window size (leave empty for default)</p>
                                     </div>
@@ -670,17 +802,98 @@
                             </div>
                         </div>
 
+                        <!-- Security Settings -->
+                        <div class="settings-section" data-section="security">
+                            <div class="section-header">
+                                <h3>Security Settings</h3>
+                                <button class="save-btn" data-section="security">
+                                    <i>💾</i>
+                                    Save Changes
+                                </button>
+                            </div>
+                            
+                            <div class="setting-group">
+                                <h4>Offline Name Blacklist</h4>
+                                <div class="setting-item">
+                                    <div class="blacklist-setting">
+                                        <label class="setting-label">Blocked Usernames</label>
+                                        <div class="blacklist-input-group">
+                                            <input type="text" id="blacklistInput" class="custom-input" placeholder="Enter username to block">
+                                            <div class="blacklist-type">
+                                                <div class="custom-radio-group">
+                                                    <label class="custom-radio">
+                                                        <input type="radio" name="blacklistType" value="exact" checked>
+                                                        <span class="radio-mark"></span>
+                                                        Exact
+                                                    </label>
+                                                    <label class="custom-radio">
+                                                        <input type="radio" name="blacklistType" value="regex">
+                                                        <span class="radio-mark"></span>
+                                                        Regex
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <button class="custom-btn primary" id="addBlacklistBtn">
+                                                <i>➕</i>
+                                                Add
+                                            </button>
+                                        </div>
+                                        <p class="setting-desc">Block specific usernames from being used in offline mode</p>
+                                        
+                                        <div class="blacklist-list" id="blacklistContainer">
+                                            <div class="blacklist-header">
+                                                <span>Blocked Names</span>
+                                                <span>Type</span>
+                                                <span>Actions</span>
+                                            </div>
+                                            <!-- Blacklist items will be populated here -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="setting-group">
+                                <h4>Default Blocked Names</h4>
+                                <div class="setting-item">
+                                    <div class="default-blacklist">
+                                        <p class="setting-desc">These names are blocked by default to prevent impersonation:</p>
+                                        <div class="default-blocked-list">
+                                            <span class="blocked-tag">Notch</span>
+                                            <span class="blocked-tag">jeb_</span>
+                                            <span class="blocked-tag">Dinnerbone</span>
+                                            <span class="blocked-tag">Grumm</span>
+                                            <span class="blocked-tag">Admin</span>
+                                            <span class="blocked-tag">Administrator</span>
+                                            <span class="blocked-tag">Moderator</span>
+                                            <span class="blocked-tag">Owner</span>
+                                            <span class="blocked-tag">Staff</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Performance Settings -->
                         <div class="settings-section" data-section="performance">
-                            <h3>Performance Settings</h3>
+                            <div class="section-header">
+                                <h3>Performance Settings</h3>
+                                <button class="save-btn" data-section="performance">
+                                    <i>💾</i>
+                                    Save Changes
+                                </button>
+                            </div>
                             
                             <div class="setting-group">
                                 <h4>Memory Management</h4>
                                 <div class="setting-item">
                                     <div class="memory-setting">
                                         <label class="setting-label">Default Memory Allocation</label>
-                                        <div class="slider-container">
-                                            <input type="range" id="defaultMemory" min="1024" max="16384" step="512" value="4096" class="performance-slider">
-                                            <div class="slider-track"></div>
+                                        <div class="custom-slider-container">
+                                            <input type="range" id="defaultMemory" min="1024" max="16384" step="512" value="4096" class="custom-slider">
+                                            <div class="slider-track">
+                                                <div class="slider-fill"></div>
+                                                <div class="slider-thumb"></div>
+                                            </div>
                                         </div>
                                         <div class="slider-labels">
                                             <span>1GB</span>
@@ -701,23 +914,32 @@
                             <div class="setting-group">
                                 <h4>Download Settings</h4>
                                 <div class="setting-item">
-                                    <div class="concurrent-setting">
+                                    <div class="select-setting">
                                         <label class="setting-label">Concurrent Downloads</label>
-                                        <select id="maxDownloads" class="setting-select">
-                                            <option value="1">1 (Slow)</option>
-                                            <option value="2">2</option>
-                                            <option value="4" selected>4 (Recommended)</option>
-                                            <option value="8">8</option>
-                                            <option value="16">16 (Fast)</option>
-                                        </select>
+                                        <div class="custom-select">
+                                            <select id="maxDownloads" class="custom-dropdown">
+                                                <option value="1">1 (Slow)</option>
+                                                <option value="2">2</option>
+                                                <option value="4" selected>4 (Recommended)</option>
+                                                <option value="8">8</option>
+                                                <option value="16">16 (Fast)</option>
+                                            </select>
+                                        </div>
                                         <p class="setting-desc">Higher values download faster but use more bandwidth</p>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
+                        <!-- Advanced Settings -->
                         <div class="settings-section" data-section="advanced">
-                            <h3>Advanced Settings</h3>
+                            <div class="section-header">
+                                <h3>Advanced Settings</h3>
+                                <button class="save-btn" data-section="advanced">
+                                    <i>💾</i>
+                                    Save Changes
+                                </button>
+                            </div>
                             
                             <div class="setting-group">
                                 <h4>Java Settings</h4>
@@ -725,8 +947,11 @@
                                     <div class="java-setting">
                                         <label class="setting-label">Java Executable Path</label>
                                         <div class="java-selector">
-                                            <input type="text" id="javaPath" class="java-input" placeholder="Auto-detect">
-                                            <button id="browseJava" class="directory-btn">Browse</button>
+                                            <input type="text" id="javaPath" class="custom-input" placeholder="Auto-detect">
+                                            <button id="browseJava" class="custom-btn secondary">
+                                                <i>📁</i>
+                                                Browse
+                                            </button>
                                         </div>
                                         <p class="setting-desc">Leave empty to auto-detect Java installation</p>
                                     </div>
@@ -734,7 +959,7 @@
                                 <div class="setting-item">
                                     <div class="jvm-setting">
                                         <label class="setting-label">Additional JVM Arguments</label>
-                                        <textarea id="jvmArgs" class="jvm-textarea" placeholder="-XX:+UseG1GC -XX:+UnlockExperimentalVMOptions"></textarea>
+                                        <textarea id="jvmArgs" class="custom-textarea" placeholder="-XX:+UseG1GC -XX:+UnlockExperimentalVMOptions"></textarea>
                                         <p class="setting-desc">Advanced JVM flags for performance tuning</p>
                                     </div>
                                 </div>
@@ -743,24 +968,45 @@
                             <div class="setting-group">
                                 <h4>Developer Options</h4>
                                 <div class="setting-item">
-                                    <label class="setting-toggle">
-                                        <input type="checkbox" id="devMode">
-                                        <span class="toggle-slider"></span>
+                                    <div class="custom-toggle">
+                                        <input type="checkbox" id="devMode" class="custom-checkbox">
+                                        <label for="devMode" class="toggle-label">
+                                            <span class="toggle-switch"></span>
+                                        </label>
                                         <div class="setting-info">
                                             <span class="setting-title">Developer Mode</span>
                                             <span class="setting-desc">Enable debug logging and developer tools</span>
                                         </div>
-                                    </label>
+                                    </div>
                                 </div>
                                 <div class="setting-item">
-                                    <label class="setting-toggle">
-                                        <input type="checkbox" id="betaUpdates">
-                                        <span class="toggle-slider"></span>
+                                    <div class="custom-toggle">
+                                        <input type="checkbox" id="verboseLogging" class="custom-checkbox">
+                                        <label for="verboseLogging" class="toggle-label">
+                                            <span class="toggle-switch"></span>
+                                        </label>
                                         <div class="setting-info">
-                                            <span class="setting-title">Beta Updates</span>
-                                            <span class="setting-desc">Receive pre-release launcher updates</span>
+                                            <span class="setting-title">Verbose Logging</span>
+                                            <span class="setting-desc">Enable detailed logging for troubleshooting</span>
                                         </div>
-                                    </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="setting-group">
+                                <h4>Reset Options</h4>
+                                <div class="setting-item">
+                                    <div class="reset-actions">
+                                        <button class="custom-btn warning" id="resetSettingsBtn">
+                                            <i>🔄</i>
+                                            Reset All Settings
+                                        </button>
+                                        <button class="custom-btn danger" id="clearDataBtn">
+                                            <i>🗑️</i>
+                                            Clear All Data
+                                        </button>
+                                    </div>
+                                    <p class="setting-desc">Warning: These actions cannot be undone</p>
                                 </div>
                             </div>
                         </div>

@@ -92,7 +92,9 @@ class YNGClient {
       },
       titleBarStyle: 'default',
       title: 'YNG Client',
-      icon: path.join(__dirname, '..', 'assets', 'icon.png'),
+      icon: process.platform === 'win32' 
+        ? path.join(__dirname, '..', 'assets', 'logo.ico')
+        : path.join(__dirname, '..', 'assets', 'icon.png'),
       show: false,
       autoHideMenuBar: true
     });
@@ -373,6 +375,20 @@ class YNGClient {
         title: 'Select Minecraft Directory'
       });
       return result.filePaths[0];
+    });
+
+    ipcMain.handle('app:selectFile', async (event, title, filters) => {
+      const result = await dialog.showOpenDialog(this.mainWindow, {
+        properties: ['openFile'],
+        title: title || 'Select File',
+        filters: filters || [{ name: 'All Files', extensions: ['*'] }]
+      });
+      return result.filePaths[0];
+    });
+
+    ipcMain.handle('app:openExternal', async (event, url) => {
+      const { shell } = require('electron');
+      await shell.openExternal(url);
     });
 
     // Instances IPC handlers
@@ -739,19 +755,81 @@ class YNGClient {
   }
 
   setupAutoUpdater() {
+    // Configure auto-updater
+    autoUpdater.autoDownload = false; // Don't auto-download, let user choose
+    autoUpdater.allowPrerelease = false; // Only stable releases
+    
+    // Check for updates on startup (only in production)
+    if (!app.isPackaged) {
+      console.log('Skip checkForUpdates because application is not packed and dev update config is not forced');
+      return;
+    }
+
+    console.log('Setting up auto-updater...');
     autoUpdater.checkForUpdatesAndNotify();
     
-    autoUpdater.on('update-available', () => {
-      this.mainWindow.webContents.send('updater:update-available');
+    // Set up event listeners
+    autoUpdater.on('checking-for-update', () => {
+      console.log('Checking for update...');
+      this.mainWindow?.webContents.send('updater:checking-for-update');
     });
 
-    autoUpdater.on('update-downloaded', () => {
-      this.mainWindow.webContents.send('updater:update-downloaded');
+    autoUpdater.on('update-available', (info) => {
+      console.log('Update available:', info);
+      this.mainWindow?.webContents.send('updater:update-available', info);
+    });
+
+    autoUpdater.on('update-not-available', (info) => {
+      console.log('Update not available:', info);
+      this.mainWindow?.webContents.send('updater:update-not-available', info);
+    });
+
+    autoUpdater.on('error', (err) => {
+      console.error('Update error:', err);
+      this.mainWindow?.webContents.send('updater:error', err.message);
+    });
+
+    autoUpdater.on('download-progress', (progressObj) => {
+      console.log(`Download progress: ${progressObj.percent}%`);
+      this.mainWindow?.webContents.send('updater:download-progress', progressObj);
+    });
+
+    autoUpdater.on('update-downloaded', (info) => {
+      console.log('Update downloaded:', info);
+      this.mainWindow?.webContents.send('updater:update-downloaded', info);
+    });
+
+    // IPC handlers for manual update checking and installation
+    ipcMain.handle('updater:checkForUpdates', async () => {
+      try {
+        const result = await autoUpdater.checkForUpdates();
+        return { success: true, updateInfo: result?.updateInfo };
+      } catch (error) {
+        console.error('Manual update check failed:', error);
+        return { success: false, error: error.message };
+      }
+    });
+
+    ipcMain.handle('updater:downloadUpdate', async () => {
+      try {
+        await autoUpdater.downloadUpdate();
+        return { success: true };
+      } catch (error) {
+        console.error('Update download failed:', error);
+        return { success: false, error: error.message };
+      }
     });
 
     ipcMain.handle('updater:quitAndInstall', () => {
       autoUpdater.quitAndInstall();
     });
+
+    // Check for updates every 6 hours
+    setInterval(() => {
+      if (app.isPackaged) {
+        autoUpdater.checkForUpdates();
+      }
+    }, 6 * 60 * 60 * 1000); // 6 hours
   }
 
   // Helper method to compare version strings (e.g., "1.2.3" vs "1.2.4")

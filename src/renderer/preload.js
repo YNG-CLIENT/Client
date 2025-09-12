@@ -33,9 +33,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   app: {
     getVersion: () => ipcRenderer.invoke('app:getVersion'),
     selectFolder: () => ipcRenderer.invoke('app:selectFolder'),
+    selectFile: (title, filters) => ipcRenderer.invoke('app:selectFile', title, filters),
     checkForUpdates: () => ipcRenderer.invoke('app:checkForUpdates'),
     openGitHub: () => ipcRenderer.invoke('app:openGitHub'),
-    openDiscord: () => ipcRenderer.invoke('app:openDiscord')
+    openDiscord: () => ipcRenderer.invoke('app:openDiscord'),
+    openExternal: (url) => ipcRenderer.invoke('app:openExternal', url)
   },
 
   // Window controls
@@ -47,9 +49,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Auto-updater methods
   updater: {
+    checkForUpdates: () => ipcRenderer.invoke('updater:checkForUpdates'),
+    downloadUpdate: () => ipcRenderer.invoke('updater:downloadUpdate'),
     quitAndInstall: () => ipcRenderer.invoke('updater:quitAndInstall'),
+    onCheckingForUpdate: (callback) => ipcRenderer.on('updater:checking-for-update', callback),
     onUpdateAvailable: (callback) => ipcRenderer.on('updater:update-available', callback),
-    onUpdateDownloaded: (callback) => ipcRenderer.on('updater:update-downloaded', callback)
+    onUpdateNotAvailable: (callback) => ipcRenderer.on('updater:update-not-available', callback),
+    onDownloadProgress: (callback) => ipcRenderer.on('updater:download-progress', callback),
+    onUpdateDownloaded: (callback) => ipcRenderer.on('updater:update-downloaded', callback),
+    onError: (callback) => ipcRenderer.on('updater:error', callback)
   },
 
   // Settings management
