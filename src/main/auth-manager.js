@@ -263,6 +263,7 @@ class AuthManager {
     return {
       id: profile.id,
       name: profile.name,
+      accessToken: accessToken, // Store the access token in the profile
       skinUrl: `https://crafatar.com/avatars/${profile.id}?size=128&overlay`,
       isOffline: false,
       playTime: 0,
@@ -287,7 +288,11 @@ class AuthManager {
       if (await fs.pathExists(this.tokenFile)) {
         const tokenData = await fs.readJSON(this.tokenFile);
         if (tokenData.profile && tokenData.timestamp > Date.now() - 24 * 60 * 60 * 1000) {
-          this.currentUser = tokenData.profile;
+          // Reconstruct currentUser with access token
+          this.currentUser = {
+            ...tokenData.profile,
+            accessToken: tokenData.minecraftToken
+          };
           this.isOfflineMode = false;
           return true;
         }
@@ -314,6 +319,13 @@ class AuthManager {
 
       if (!this.isOfflineMode && await fs.pathExists(this.tokenFile)) {
         const tokenData = await fs.readJSON(this.tokenFile);
+        // Reconstruct profile with access token from saved data
+        if (tokenData.profile && tokenData.minecraftToken) {
+          return {
+            ...tokenData.profile,
+            accessToken: tokenData.minecraftToken
+          };
+        }
         return tokenData.profile;
       }
     } catch (error) {

@@ -1,16 +1,17 @@
 const DiscordRPC = require('discord-rpc');
 
 /**
- * Discord Rich Presence Manager for YNG Client
- * Shows current activity and game status
+ * Enhanced Discord Rich Presence Manager for YNG Client
+ * Shows current activity, game status, playtime, and server info
  */
 class DiscordRPCManager {
   constructor() {
-    this.clientId = '1415814312852848681'; // Replace with your Discord app ID
+    this.clientId = '1415814312852848681'; // YNG Client Discord App ID
     this.rpc = null;
     this.isConnected = false;
     this.currentActivity = null;
     this.gameStartTime = null;
+    this.launcherStartTime = Date.now();
     this.lastWorldInfo = null;
     
     this.init();
@@ -23,7 +24,7 @@ class DiscordRPCManager {
       this.rpc.on('ready', () => {
         console.log('Discord RPC connected');
         this.isConnected = true;
-        this.setActivity('launcher', 'In Launcher');
+        this.setLauncherActivity();
       });
 
       this.rpc.on('disconnected', () => {
@@ -38,148 +39,204 @@ class DiscordRPCManager {
     }
   }
 
-  async setActivity(type, details, state = '', worldInfo = null) {
-    if (!this.isConnected || !this.rpc) return;
+  setLauncherActivity(details = 'In YNG Client Launcher', state = 'Browsing menu') {
+    if (!this.isConnected) return;
 
-    try {
-      const activity = {
-        details: details || 'YNG Client',
-        state: state || 'Ready to play',
-        largeImageKey: 'yng-logo', // Upload logo to Discord app assets
-        largeImageText: 'YNG Client',
-        instance: false,
-      };
-
-      // Ensure state is always a string and not empty
-      if (!activity.state || activity.state === null || activity.state === undefined) {
-        activity.state = 'Ready to play';
-      }
-
-      switch (type) {
-        case 'launcher':
-          activity.smallImageKey = 'launcher-icon';
-          activity.smallImageText = 'In Launcher';
-          activity.startTimestamp = Date.now();
-          break;
-
-        case 'menu':
-          activity.smallImageKey = 'menu-icon';
-          activity.smallImageText = 'Browsing Menu';
-          activity.startTimestamp = Date.now();
-          break;
-
-        case 'game':
-          activity.smallImageKey = this.getWorldIcon(worldInfo);
-          activity.smallImageText = this.getWorldText(worldInfo);
-          activity.startTimestamp = this.gameStartTime || Date.now();
-          
-          if (worldInfo) {
-            activity.state = `${worldInfo.dimension} • ${worldInfo.biome}`;
-            if (worldInfo.worldName) {
-              activity.details = `Playing ${worldInfo.worldName}`;
-            }
-          }
-          break;
-
-        case 'downloading':
-          activity.smallImageKey = 'download-icon';
-          activity.smallImageText = 'Downloading';
-          activity.startTimestamp = Date.now();
-          break;
-      }
-
-      await this.rpc.setActivity(activity);
-      this.currentActivity = activity;
-    } catch (error) {
-      console.error('Error setting Discord activity:', error);
-    }
-  }
-
-  getWorldIcon(worldInfo) {
-    if (!worldInfo) return 'overworld-icon';
-    
-    switch (worldInfo.dimension) {
-      case 'the_nether':
-        return 'nether-icon';
-      case 'the_end':
-        return 'end-icon';
-      default:
-        return 'overworld-icon';
-    }
-  }
-
-  getWorldText(worldInfo) {
-    if (!worldInfo) return 'Overworld';
-    
-    switch (worldInfo.dimension) {
-      case 'the_nether':
-        return 'The Nether';
-      case 'the_end':
-        return 'The End';
-      default:
-        return 'Overworld';
-    }
-  }
-
-  // Launcher states
-  async setLauncherActivity(screen) {
-    const activities = {
-      'home': { details: 'Home Screen', state: 'Ready to launch' },
-      'versions': { details: 'Managing Versions', state: 'Browsing versions' },
-      'settings': { details: 'Configuring Settings', state: 'Customizing launcher' },
-      'about': { details: 'About YNG Client', state: 'Reading information' },
-      'login': { details: 'Signing In', state: 'Authenticating' }
+    const activity = {
+      details: details,
+      state: state,
+      startTimestamp: this.launcherStartTime,
+      largeImageKey: 'yng_logo',
+      largeImageText: 'YNG Client - Free Minecraft Launcher',
+      smallImageKey: 'launcher_icon',
+      smallImageText: 'v1.0.0',
+      buttons: [
+        {
+          label: 'Download YNG Client',
+          url: 'https://github.com/YNG-CLIENT/YNG-Client'
+        }
+      ]
     };
 
-    const activity = activities[screen] || { details: 'In Launcher', state: 'Browsing' };
-    await this.setActivity('menu', activity.details, activity.state);
+    this.updateActivity(activity);
   }
 
-  async setDownloadActivity(version, progress) {
-    const state = `${Math.round(progress || 0)}% complete`;
-    await this.setActivity('downloading', `Downloading Minecraft ${version}`, state);
-  }
+  setGameActivity(gameInfo) {
+    if (!this.isConnected) return;
 
-  async setGameActivity(worldInfo = null) {
+    const {
+      version,
+      server,
+      playerCount,
+      maxPlayers,
+      gameMode,
+      playtime,
+      world,
+      dimension,
+      coordinates
+    } = gameInfo || {};
+
+    // Ensure we have a valid version
+    const gameVersion = version || 'Unknown';
     this.gameStartTime = this.gameStartTime || Date.now();
-    this.lastWorldInfo = worldInfo || this.lastWorldInfo;
-    
-    const details = worldInfo?.worldName ? `Playing ${worldInfo.worldName}` : 'Playing Minecraft';
-    await this.setActivity('game', details, null, this.lastWorldInfo);
+
+    let state = 'Singleplayer';
+    let partySize = null;
+    let partyMax = null;
+
+    if (server) {
+      state = server.name || server.address || 'Multiplayer Server';
+      if (playerCount && maxPlayers) {
+        partySize = playerCount;
+        partyMax = maxPlayers;
+      }
+    } else if (world) {
+      state = `World: ${world}`;
+      if (dimension && dimension !== 'overworld') {
+        state += ` (${this.formatDimension(dimension)})`;
+      }
+    }
+
+    if (gameMode) {
+      state += ` • ${this.formatGameMode(gameMode)}`;
+    }
+
+    const activity = {
+      details: `Playing Minecraft ${gameVersion}`,
+      state: state,
+      startTimestamp: this.gameStartTime,
+      largeImageKey: this.getVersionIcon(gameVersion),
+      largeImageText: `Minecraft ${gameVersion}`,
+      smallImageKey: 'yng_logo',
+      smallImageText: 'YNG Client',
+      buttons: [
+        {
+          label: 'Get YNG Client',
+          url: 'https://github.com/YNG-CLIENT/YNG-Client'
+        }
+      ]
+    };
+
+    if (partySize && partyMax) {
+      activity.partySize = partySize;
+      activity.partyMax = partyMax;
+    }
+
+    // Add coordinates if available
+    if (coordinates) {
+      activity.state += ` • ${coordinates.x}, ${coordinates.z}`;
+    }
+
+    // Add server join button if it's a public server
+    if (server && server.joinable && server.address) {
+      activity.buttons.unshift({
+        label: 'Join Server',
+        url: `minecraft://connect/${server.address}`
+      });
+    }
+
+    this.updateActivity(activity);
   }
 
-  async updateWorldInfo(worldInfo) {
-    if (this.currentActivity?.smallImageKey?.includes('icon') && 
-        this.currentActivity.smallImageKey !== 'launcher-icon' && 
-        this.currentActivity.smallImageKey !== 'menu-icon') {
-      this.lastWorldInfo = worldInfo;
-      await this.setGameActivity(worldInfo);
+  setMenuActivity(menuType) {
+    const menuStates = {
+      'main': 'Main Menu',
+      'settings': 'Settings',
+      'versions': 'Version Selection',
+      'profiles': 'Profile Management',
+      'servers': 'Server Browser',
+      'mods': 'Mod Manager',
+      'stats': 'Viewing Statistics'
+    };
+
+    this.setLauncherActivity('In YNG Client Launcher', menuStates[menuType] || 'Browsing menu');
+  }
+
+  setDownloadActivity(version, progress) {
+    const state = progress ? `${Math.round(progress)}% complete` : 'Preparing download';
+    this.setLauncherActivity(`Downloading Minecraft ${version}`, state);
+  }
+
+  updateActivity(activity) {
+    if (!this.isConnected || !this.rpc) return;
+
+    try {
+      this.rpc.setActivity(activity);
+      this.currentActivity = activity;
+    } catch (error) {
+      console.error('Error updating Discord activity:', error);
     }
   }
 
-  async clearActivity() {
+  clearActivity() {
     if (!this.isConnected || !this.rpc) return;
-    
+
     try {
-      await this.rpc.clearActivity();
+      this.rpc.clearActivity();
       this.currentActivity = null;
-      this.gameStartTime = null;
-      this.lastWorldInfo = null;
     } catch (error) {
       console.error('Error clearing Discord activity:', error);
     }
   }
 
-  async destroy() {
+  formatDimension(dimension) {
+    const dimensionNames = {
+      'overworld': 'Overworld',
+      'the_nether': 'The Nether',
+      'the_end': 'The End'
+    };
+    return dimensionNames[dimension] || dimension;
+  }
+
+  formatGameMode(gameMode) {
+    const modes = {
+      'survival': 'Survival',
+      'creative': 'Creative',
+      'adventure': 'Adventure',
+      'spectator': 'Spectator'
+    };
+    return modes[gameMode] || gameMode;
+  }
+
+  getVersionIcon(version) {
+    // Return different icons based on version type
+    if (!version) return 'minecraft_icon';
+    
+    if (version.includes('1.21')) return 'minecraft_1_21';
+    if (version.includes('1.20')) return 'minecraft_1_20';
+    if (version.includes('1.19')) return 'minecraft_1_19';
+    if (version.includes('snapshot')) return 'minecraft_snapshot';
+    return 'minecraft_icon';
+  }
+
+  onGameStart(version) {
+    this.gameStartTime = Date.now();
+  }
+
+  onGameEnd() {
+    this.gameStartTime = null;
+    this.setLauncherActivity();
+  }
+
+  disconnect() {
     if (this.rpc) {
       try {
-        await this.clearActivity();
         this.rpc.destroy();
+        this.isConnected = false;
+        this.currentActivity = null;
+        console.log('Discord RPC disconnected');
       } catch (error) {
-        console.error('Error destroying Discord RPC:', error);
+        console.error('Error disconnecting Discord RPC:', error);
       }
     }
-    this.isConnected = false;
+  }
+
+  getConnectionStatus() {
+    return this.isConnected;
+  }
+
+  getCurrentActivity() {
+    return this.currentActivity;
   }
 }
 

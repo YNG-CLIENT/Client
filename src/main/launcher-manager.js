@@ -75,9 +75,37 @@ class LauncherManager {
     args.push(`-Xmx${memory}M`);
     args.push(`-Xms${Math.min(512, memory)}M`);
     
+    // Windows-specific JVM optimizations
+    if (os.platform() === 'win32') {
+      args.push('-XX:+UnlockExperimentalVMOptions');
+      args.push('-XX:+UseG1GC');
+      args.push('-XX:G1NewSizePercent=20');
+      args.push('-XX:G1ReservePercent=20');
+      args.push('-XX:MaxGCPauseMillis=50');
+      args.push('-XX:G1HeapRegionSize=32M');
+    }
+    
     // Native library path
     const nativesDir = await this.extractNatives(versionJson, gameDir);
     args.push(`-Djava.library.path=${nativesDir}`);
+    
+    // Set additional system properties for debugging and identification
+    args.push(`-Djna.tmpdir=${nativesDir}`);
+    args.push(`-Dorg.lwjgl.system.SharedLibraryExtractPath=${nativesDir}`);
+    args.push(`-Dio.netty.native.workdir=${nativesDir}`);
+    
+    // Set launcher brand and version - this makes YNG Client appear in F3 debug screen and Vulcan
+    args.push('-Dminecraft.launcher.brand=YNG-Client');
+    args.push('-Dminecraft.launcher.version=1.0.0');
+    
+    // Additional brand properties for better detection by anti-cheat systems
+    args.push('-Dlauncher.brand=YNG-Client');
+    args.push('-Dlauncher.name=YNG-Client');
+    args.push('-Dlauncher.vendor=YNG-Client');
+    args.push('-Dforge.logging.markers=REGISTRIES');
+    
+    // Set JVM name property
+    args.push(`-XX:HeapDumpPath=MojangTricksIntelDriversForPerformance_javaw.exe_minecraft.exe.heapdump`);
     
     // Classpath
     const classpath = await this.buildClasspath(versionJson);
@@ -100,7 +128,19 @@ class LauncherManager {
         launcher_version: '1.0.0',
         classpath: classpath
       });
-      args.push(...jvmArgs);
+      
+      // Filter out macOS-specific arguments on Windows
+      const filteredJvmArgs = jvmArgs.filter(arg => {
+        if (os.platform() === 'win32') {
+          // Remove macOS-specific JVM arguments that cause issues on Windows
+          return !arg.includes('-XstartOnFirstThread') && 
+                 !arg.includes('-Xdock:name') &&
+                 !arg.includes('-Xdock:icon');
+        }
+        return true;
+      });
+      
+      args.push(...filteredJvmArgs);
     }
     
     // Main class
@@ -115,8 +155,8 @@ class LauncherManager {
         assets_root: path.join(os.homedir(), '.minecraft', 'assets'),
         assets_index_name: versionJson.assetIndex ? versionJson.assetIndex.id : 'legacy',
         auth_uuid: user.id,
-        auth_access_token: 'dummy',
-        user_type: 'msa',
+        auth_access_token: user.isOffline ? 'offline' : (user.accessToken || 'dummy'),
+        user_type: user.isOffline ? 'legacy' : 'msa',
         version_type: versionJson.type
       });
       args.push(...gameArgs);
@@ -129,8 +169,8 @@ class LauncherManager {
         '--assetsDir', path.join(os.homedir(), '.minecraft', 'assets'),
         '--assetIndex', versionJson.assetIndex ? versionJson.assetIndex.id : 'legacy',
         '--uuid', user.id,
-        '--accessToken', 'dummy',
-        '--userType', 'msa',
+        '--accessToken', user.isOffline ? 'offline' : (user.accessToken || 'dummy'),
+        '--userType', user.isOffline ? 'legacy' : 'msa',
         '--versionType', versionJson.type
       ];
       args.push(...legacyArgs);
@@ -152,6 +192,35 @@ class LauncherManager {
         for (const rule of arg.rules) {
           if (rule.action === 'disallow') {
             if (!rule.os || this.matchesCurrentOS(rule.os)) {
+              shouldInclude = false;
+              break;
+            }
+          } else if (rule.action === 'allow') {
+            // Handle feature-based rules - skip features we don't want
+            if (rule.features) {
+              // Skip any arguments that require specific features we don't support
+              if (rule.features.has_quick_plays_support || 
+                  rule.features.is_quick_play_singleplayer ||
+                  rule.features.is_quick_play_multiplayer ||
+                  rule.features.is_quick_play_realms ||
+                  rule.features.is_demo_user) {
+                shouldInclude = false;
+                break;
+              }
+              
+              // Allow only resolution features for full screen support
+              if (rule.features.has_custom_resolution) {
+                shouldInclude = true;
+                continue;
+              }
+              
+              // For any other feature rules, skip them by default
+              shouldInclude = false;
+              break;
+            }
+            
+            // Handle OS-based allow rules
+            if (rule.os && !this.matchesCurrentOS(rule.os)) {
               shouldInclude = false;
               break;
             }

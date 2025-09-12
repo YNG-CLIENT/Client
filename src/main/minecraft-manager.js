@@ -38,7 +38,25 @@ class MinecraftManager {
 
   async downloadVersion(versionId, progressCallback) {
     try {
-      progressCallback({ message: 'Loading version manifest...', percentage: 0 });
+      const startTime = Date.now();
+      let totalBytesDownloaded = 0;
+      
+      const updateProgress = (message, percentage, bytesDownloaded = 0, totalBytes = 0) => {
+        totalBytesDownloaded += bytesDownloaded;
+        const elapsed = (Date.now() - startTime) / 1000;
+        const speed = elapsed > 0 ? totalBytesDownloaded / elapsed : 0;
+        
+        progressCallback({ 
+          message, 
+          percentage,
+          downloaded: totalBytesDownloaded,
+          total: totalBytes,
+          speed,
+          elapsed
+        });
+      };
+      
+      updateProgress('Loading version manifest...', 0);
       
       const manifest = await this.getVersionManifest();
       const versionInfo = manifest.versions.find(v => v.id === versionId);
@@ -47,27 +65,31 @@ class MinecraftManager {
         throw new Error(`Version ${versionId} not found`);
       }
 
-      progressCallback({ message: 'Downloading version info...', percentage: 10 });
+      updateProgress('Downloading version info...', 10);
       
       // Download version JSON
       const versionJson = await this.downloadVersionJson(versionInfo);
       
-      progressCallback({ message: 'Downloading libraries...', percentage: 25 });
+      updateProgress('Downloading libraries...', 25);
       
       // Download libraries
-      await this.downloadLibraries(versionJson, progressCallback);
+      await this.downloadLibraries(versionJson, (libProgress) => {
+        updateProgress(libProgress.message, libProgress.percentage, libProgress.bytesDownloaded || 0);
+      });
       
-      progressCallback({ message: 'Downloading assets...', percentage: 65 });
+      updateProgress('Downloading assets...', 65);
       
       // Download assets
-      await this.downloadAssets(versionJson, progressCallback);
+      await this.downloadAssets(versionJson, (assetProgress) => {
+        updateProgress(assetProgress.message, assetProgress.percentage, assetProgress.bytesDownloaded || 0);
+      });
       
-      progressCallback({ message: 'Downloading client JAR...', percentage: 85 });
+      updateProgress('Downloading client JAR...', 85);
       
       // Download client JAR
       await this.downloadClientJar(versionJson);
       
-      progressCallback({ message: 'Download complete!', percentage: 100 });
+      updateProgress('Download complete!', 100);
       
       return { success: true, version: versionJson };
     } catch (error) {

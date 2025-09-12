@@ -5,6 +5,9 @@ const AuthManager = require('./main/auth-manager');
 const MinecraftManager = require('./main/minecraft-manager');
 const LauncherManager = require('./main/launcher-manager');
 const DiscordRPCManager = require('./main/discord-rpc-manager');
+const SettingsManager = require('./main/settings-manager');
+const PlaytimeTracker = require('./main/playtime-tracker');
+const InstancesManager = require('./main/instances-manager');
 
 // Add GPU workarounds for Windows
 if (process.platform === 'win32') {
@@ -21,8 +24,22 @@ class YNGClient {
     this.minecraftManager = new MinecraftManager();
     this.launcherManager = new LauncherManager();
     this.discordRPC = new DiscordRPCManager();
+    this.settingsManager = new SettingsManager();
+    this.playtimeTracker = new PlaytimeTracker();
+    this.instancesManager = new InstancesManager();
     
+    // Initialize settings before app ready
+    this.initializeManagers();
     this.initializeApp();
+  }
+
+  async initializeManagers() {
+    try {
+      await this.settingsManager.loadSettings();
+      console.log('Settings manager initialized');
+    } catch (error) {
+      console.error('Failed to initialize settings manager:', error);
+    }
   }
 
   initializeApp() {
@@ -49,13 +66,11 @@ class YNGClient {
     this.mainWindow = new BrowserWindow({
       width: 1400,
       height: 900,
-      minWidth: 1400,
-      minHeight: 900,
-      maxWidth: 1400,
-      maxHeight: 900,
-      resizable: false,
-      maximizable: false,
-      fullscreenable: false,
+      minWidth: 1200,
+      minHeight: 800,
+      resizable: true,
+      maximizable: true,
+      fullscreenable: true,
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
@@ -147,6 +162,48 @@ class YNGClient {
       return await this.authManager.isLoggedIn();
     });
 
+    // Settings IPC handlers
+    ipcMain.handle('settings:get', (event, key) => {
+      return this.settingsManager.getSetting(key);
+    });
+
+    ipcMain.handle('settings:set', async (event, key, value) => {
+      return await this.settingsManager.setSetting(key, value);
+    });
+
+    ipcMain.handle('settings:getAll', () => {
+      return this.settingsManager.getAllSettings();
+    });
+
+    ipcMain.handle('settings:reset', async () => {
+      return await this.settingsManager.resetSettings();
+    });
+
+    // Playtime tracking IPC handlers
+    ipcMain.handle('playtime:getStats', () => {
+      return this.playtimeTracker.getStats();
+    });
+
+    ipcMain.handle('playtime:getSessionHistory', (event, limit) => {
+      // Use getStats for now since getSessionHistory doesn't exist
+      return this.playtimeTracker.getStats();
+    });
+
+    ipcMain.handle('playtime:getDailyStats', (event, days) => {
+      // Return today's stats from the main getStats method
+      const stats = this.playtimeTracker.getStats();
+      return [{
+        totalPlaytime: stats.todayPlaytime || 0,
+        sessionCount: 1, // Placeholder
+        firstSession: Date.now() - (stats.todayPlaytime || 0) * 60000,
+        lastSession: Date.now()
+      }];
+    });
+
+    ipcMain.handle('playtime:getWeeklyStats', (event, weeks) => {
+      return [this.playtimeTracker.getWeeklyStats()];
+    });
+
     // Discord RPC handlers
     ipcMain.handle('discord:setActivity', async (event, type, details, state, worldInfo) => {
       return this.discordRPC.setActivity(type, details, state, worldInfo);
@@ -178,9 +235,39 @@ class YNGClient {
     // Game launching
     ipcMain.handle('minecraft:launch', async (event, options) => {
       try {
-        return await this.launcherManager.launchMinecraft(options);
+        // Validate options
+        const versionId = options?.versionId || options?.version;
+        const username = options?.user?.name || options?.username || 'Unknown';
+        
+        if (!versionId) {
+          throw new Error('Version ID is required for launching');
+        }
+        
+        // Start playtime tracking
+        this.playtimeTracker.startSession(versionId, username);
+        
+        // Update Discord RPC
+        this.discordRPC.onGameStart(versionId);
+        this.discordRPC.setGameActivity({
+          version: versionId,
+          world: options?.worldName || 'New World'
+        });
+
+        const result = await this.launcherManager.launchMinecraft(options);
+        
+        // Setup game process monitoring for playtime
+        if (result.success && result.process) {
+          result.process.on('exit', () => {
+            this.playtimeTracker.endSession();
+            this.discordRPC.onGameEnd();
+          });
+        }
+        
+        return result;
       } catch (error) {
         console.error('Launch error:', error);
+        this.playtimeTracker.endSession();
+        this.discordRPC.onGameEnd();
         throw error;
       }
     });
@@ -196,6 +283,73 @@ class YNGClient {
         title: 'Select Minecraft Directory'
       });
       return result.filePaths[0];
+    });
+
+    // Instances IPC handlers
+    ipcMain.handle('instances:getAll', async () => {
+      try {
+        return await this.instancesManager.getAllInstances();
+      } catch (error) {
+        console.error('Failed to get instances:', error);
+        return [];
+      }
+    });
+
+    ipcMain.handle('instances:create', async (event, instanceData) => {
+      try {
+        return await this.instancesManager.createInstance(instanceData);
+      } catch (error) {
+        console.error('Failed to create instance:', error);
+        throw error;
+      }
+    });
+
+    ipcMain.handle('instances:delete', async (event, instanceId) => {
+      try {
+        return await this.instancesManager.deleteInstance(instanceId);
+      } catch (error) {
+        console.error('Failed to delete instance:', error);
+        throw error;
+      }
+    });
+
+    ipcMain.handle('instances:update', async (event, instanceId, updateData) => {
+      try {
+        return await this.instancesManager.updateInstance(instanceId, updateData);
+      } catch (error) {
+        console.error('Failed to update instance:', error);
+        throw error;
+      }
+    });
+
+    ipcMain.handle('instances:duplicate', async (event, instanceId, newName) => {
+      try {
+        return await this.instancesManager.duplicateInstance(instanceId, newName);
+      } catch (error) {
+        console.error('Failed to duplicate instance:', error);
+        throw error;
+      }
+    });
+
+    ipcMain.handle('instances:import', async () => {
+      try {
+        const result = await dialog.showOpenDialog(this.mainWindow, {
+          title: 'Import Instance',
+          properties: ['openFile'],
+          filters: [
+            { name: 'Instance Files', extensions: ['zip', 'tar', 'tar.gz'] },
+            { name: 'All Files', extensions: ['*'] }
+          ]
+        });
+
+        if (!result.canceled && result.filePaths.length > 0) {
+          return await this.instancesManager.importInstance(result.filePaths[0]);
+        }
+        return { success: false, error: 'No file selected' };
+      } catch (error) {
+        console.error('Failed to import instance:', error);
+        throw error;
+      }
     });
 
     // Window control handlers
@@ -224,6 +378,23 @@ class YNGClient {
     // Minecraft directory helper
     ipcMain.handle('minecraft:getDefaultDirectory', () => {
       return this.minecraftManager.getDefaultGameDirectory();
+    });
+
+    // Dialog and file system handlers for cape management
+    ipcMain.handle('dialog:showOpenDialog', async (event, options) => {
+      const result = await dialog.showOpenDialog(this.mainWindow, options);
+      return result;
+    });
+
+    ipcMain.handle('fs:readFile', async (event, filePath, options) => {
+      const fs = require('fs').promises;
+      try {
+        const data = await fs.readFile(filePath, options);
+        return data;
+      } catch (error) {
+        console.error('Failed to read file:', error);
+        throw error;
+      }
     });
   }
 

@@ -39,6 +39,10 @@
                     <i class="nav-icon">📦</i>
                     <span>Versions</span>
                 </div>
+                <div class="nav-item" data-screen="instances">
+                    <i class="nav-icon">🎯</i>
+                    <span>Instances</span>
+                </div>
                 <div class="nav-item" data-screen="downloads">
                     <i class="nav-icon">📥</i>
                     <span>Downloads</span>
@@ -46,6 +50,10 @@
                 <div class="nav-item" data-screen="settings">
                     <i class="nav-icon">⚙️</i>
                     <span>Settings</span>
+                </div>
+                <div class="nav-item" data-screen="stats">
+                    <i class="nav-icon">📊</i>
+                    <span>Statistics</span>
                 </div>
                 <div class="nav-item" data-screen="about">
                     <i class="nav-icon">ℹ️</i>
@@ -179,11 +187,70 @@
                                     <span class="stat-label">Launches</span>
                                 </div>
                             </div>
-                            <div class="profile-actions">
-                                <button id="logoutBtn" class="logout-btn" title="Logout">
-                                    <span class="btn-icon">🚪</span>
-                                    Logout
-                                </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Customization Section -->
+                <div class="customization-section">
+                    <div class="section-header">
+                        <h3>Customize Your Character</h3>
+                        <p>Change your skin and cape to express yourself</p>
+                    </div>
+                    
+                    <div class="customization-grid">
+                        <div class="custom-card">
+                            <div class="card-header">
+                                <div class="card-icon">🎨</div>
+                                <h4>Skin Changer</h4>
+                            </div>
+                            <div class="card-content">
+                                <p>Upload or choose from popular skins</p>
+                                <div class="custom-actions">
+                                    <button id="uploadSkinBtn" class="custom-btn">
+                                        <span class="btn-icon">�</span>
+                                        Upload Skin
+                                    </button>
+                                    <button id="browseSkinBtn" class="custom-btn secondary">
+                                        <span class="btn-icon">🌐</span>
+                                        Browse Skins
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="custom-card">
+                            <div class="card-header">
+                                <div class="card-icon">🦸</div>
+                                <h4>Cape Changer</h4>
+                            </div>
+                            <div class="card-content">
+                                <p>Equip capes and show your style</p>
+                                <div class="custom-actions">
+                                    <button id="browseCapeBtn" class="custom-btn">
+                                        <span class="btn-icon">🎭</span>
+                                        Browse Capes
+                                    </button>
+                                    <button id="removeCapeBtn" class="custom-btn secondary">
+                                        <span class="btn-icon">❌</span>
+                                        Remove Cape
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="custom-card">
+                            <div class="card-header">
+                                <div class="card-icon">👁️</div>
+                                <h4>Preview Character</h4>
+                            </div>
+                            <div class="card-content">
+                                <p>See how you look in-game</p>
+                                <div class="preview-container">
+                                    <div id="characterPreview" class="character-preview">
+                                        <img id="previewSkin" src="" alt="Character Preview" class="preview-image">
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -193,67 +260,40 @@
                 <div class="quick-launch-section">
                     <div class="section-header">
                         <h3>Quick Launch</h3>
-                        <button id="refreshVersions" class="icon-btn" title="Refresh Versions">
-                            <span>🔄</span>
-                        </button>
-                    </div>
-                    
-                    <div class="launch-grid">
-                        <div class="launch-card">
-                            <div class="card-content">
-                                <div class="version-selector-wrapper">
-                                    <select id="versionSelect" class="version-dropdown">
-                                        <option value="">Loading versions...</option>
-                                    </select>
-                                    <div class="dropdown-icon">⌄</div>
-                                </div>
-                                
-                                <div class="version-filters">
-                                    <label class="filter-toggle">
-                                        <input type="checkbox" id="showSnapshots">
-                                        <span class="toggle-slider"></span>
-                                        <span class="toggle-label">Snapshots</span>
-                                    </label>
-                                    <label class="filter-toggle">
-                                        <input type="checkbox" id="showBetas">
-                                        <span class="toggle-slider"></span>
-                                        <span class="toggle-label">Beta/Alpha</span>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="launch-card">
-                            <div class="card-content">
-                                <div class="memory-settings">
-                                    <label class="setting-label">
-                                        Memory Allocation
-                                        <span class="memory-value" id="memoryValue">4096 MB</span>
-                                    </label>
-                                    <div class="slider-container">
-                                        <input type="range" id="memorySlider" min="1024" max="16384" step="512" value="4096" class="memory-slider">
-                                        <div class="slider-track"></div>
-                                    </div>
-                                    <div class="slider-labels">
-                                        <span>1GB</span>
-                                        <span>16GB</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        <p>Launch your favorite instance or create a new one</p>
                     </div>
                     
                     <div class="launch-button-container">
-                        <button id="launchBtn" class="launch-btn" disabled>
-                            <div class="btn-content">
-                                <div class="btn-icon">🚀</div>
-                                <div class="btn-text">
-                                    <span class="btn-title" id="launchText">Select Version to Play</span>
-                                    <span class="btn-subtitle">Click to launch Minecraft</span>
+                        <div class="play-button-group">
+                            <button id="launchBtn" class="launch-btn">
+                                <div class="btn-content">
+                                    <div class="btn-icon">🚀</div>
+                                    <div class="btn-text">
+                                        <span class="btn-title" id="launchText">Select Instance to Play</span>
+                                        <span class="btn-subtitle">Choose from your instances</span>
+                                    </div>
+                                </div>
+                                <div class="btn-glow"></div>
+                            </button>
+                            <button id="instanceDropdownBtn" class="instance-dropdown-btn">
+                                <span class="dropdown-arrow">▼</span>
+                            </button>
+                        </div>
+                        
+                        <div id="instanceDropdown" class="instance-dropdown hidden">
+                            <div class="dropdown-header">
+                                <span>Select Instance</span>
+                            </div>
+                            <div id="instanceList" class="instance-list">
+                                <div class="no-instances">
+                                    <span>No instances created</span>
+                                    <button id="createInstanceFromHome" class="create-instance-btn">
+                                        <span class="btn-icon">➕</span>
+                                        Create Instance
+                                    </button>
                                 </div>
                             </div>
-                            <div class="btn-glow"></div>
-                        </button>
+                        </div>
                     </div>
                     
                     <div id="launchStatus" class="status-message"></div>
@@ -285,6 +325,24 @@
                 </div>
                 
                 <div class="versions-container">
+                    <!-- Mod Loader Tabs -->
+                    <div class="modloader-tabs">
+                        <div class="tab-list">
+                            <button class="tab-btn active" data-loader="vanilla">
+                                <span class="tab-icon">🏗️</span>
+                                Vanilla
+                            </button>
+                            <button class="tab-btn" data-loader="fabric">
+                                <span class="tab-icon">🧵</span>
+                                Fabric
+                            </button>
+                            <button class="tab-btn" data-loader="neoforge">
+                                <span class="tab-icon">⚒️</span>
+                                NeoForge
+                            </button>
+                        </div>
+                    </div>
+                    
                     <div class="version-filters">
                         <div class="filter-group">
                             <label class="checkbox-container">
@@ -313,6 +371,41 @@
                         <div class="loading-placeholder">
                             <div class="loading-spinner"></div>
                             <p>Loading Minecraft versions...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Instances Screen -->
+            <div id="instancesScreen" class="screen">
+                <div class="page-header">
+                    <div class="header-content">
+                        <h1 class="page-title">Instance Manager</h1>
+                        <p class="page-subtitle">Create and manage modpack instances</p>
+                    </div>
+                    <div class="header-actions">
+                        <button id="createInstanceBtn" class="primary-btn">
+                            <span class="btn-icon">➕</span>
+                            Create Instance
+                        </button>
+                        <button id="importInstanceBtn" class="secondary-btn">
+                            <span class="btn-icon">📥</span>
+                            Import
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="instances-container">
+                    <div class="instances-grid" id="instancesList">
+                        <!-- Instances will be populated here -->
+                        <div class="empty-state">
+                            <div class="empty-icon">🎯</div>
+                            <h3>No Instances Created</h3>
+                            <p>Create your first instance to get started with modpacks</p>
+                            <button class="primary-btn" onclick="document.getElementById('createInstanceBtn').click()">
+                                <span class="btn-icon">➕</span>
+                                Create Instance
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -515,6 +608,50 @@
                                         </div>
                                     </label>
                                 </div>
+                                <div class="setting-item">
+                                    <label class="setting-toggle">
+                                        <input type="checkbox" id="allowMultipleInstances">
+                                        <span class="toggle-slider"></span>
+                                        <div class="setting-info">
+                                            <span class="setting-title">Allow multiple instances</span>
+                                            <span class="setting-desc">Enable launching multiple Minecraft instances on the same account</span>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="setting-group">
+                                <h4>Discord Integration</h4>
+                                <div class="setting-item">
+                                    <label class="setting-toggle">
+                                        <input type="checkbox" id="discordRPC" checked>
+                                        <span class="toggle-slider"></span>
+                                        <div class="setting-info">
+                                            <span class="setting-title">Discord Rich Presence</span>
+                                            <span class="setting-desc">Show your Minecraft activity on Discord</span>
+                                        </div>
+                                    </label>
+                                </div>
+                                <div class="setting-item">
+                                    <label class="setting-toggle">
+                                        <input type="checkbox" id="showServerInfo" checked>
+                                        <span class="toggle-slider"></span>
+                                        <div class="setting-info">
+                                            <span class="setting-title">Show server information</span>
+                                            <span class="setting-desc">Display server name and player count in Discord</span>
+                                        </div>
+                                    </label>
+                                </div>
+                                <div class="setting-item">
+                                    <label class="setting-toggle">
+                                        <input type="checkbox" id="showCoordinates">
+                                        <span class="toggle-slider"></span>
+                                        <div class="setting-info">
+                                            <span class="setting-title">Show coordinates</span>
+                                            <span class="setting-desc">Display your world coordinates in Discord (singleplayer only)</span>
+                                        </div>
+                                    </label>
+                                </div>
                             </div>
 
                             <div class="setting-group">
@@ -631,6 +768,113 @@
                 </div>
             </div>
 
+            <!-- Statistics Screen -->
+            <div id="statsScreen" class="screen">
+                <div class="page-header">
+                    <h1 class="page-title">Statistics</h1>
+                    <p class="page-subtitle">Your gaming analytics and playtime tracking</p>
+                </div>
+
+                <div class="stats-container">
+                    <div class="stats-grid">
+                        <!-- Overall Stats Card -->
+                        <div class="stat-card overall-stats">
+                            <div class="stat-header">
+                                <i class="stat-icon">🎮</i>
+                                <h3>Overall Statistics</h3>
+                            </div>
+                            <div class="stat-content">
+                                <div class="stat-item">
+                                    <div class="stat-label">Total Playtime</div>
+                                    <div class="stat-value" id="totalPlaytime">0h 0m</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-label">Gaming Sessions</div>
+                                    <div class="stat-value" id="totalSessions">0</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-label">Average Session</div>
+                                    <div class="stat-value" id="avgSession">0m</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-label">Longest Session</div>
+                                    <div class="stat-value" id="longestSession">0m</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Today's Stats Card -->
+                        <div class="stat-card today-stats">
+                            <div class="stat-header">
+                                <i class="stat-icon">📅</i>
+                                <h3>Today's Gaming</h3>
+                            </div>
+                            <div class="stat-content">
+                                <div class="stat-item">
+                                    <div class="stat-label">Playtime Today</div>
+                                    <div class="stat-value" id="todayPlaytime">0h 0m</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-label">Sessions Today</div>
+                                    <div class="stat-value" id="todaySessions">0</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-label">First Played</div>
+                                    <div class="stat-value" id="firstPlayed">--:--</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-label">Last Played</div>
+                                    <div class="stat-value" id="lastPlayed">--:--</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Weekly Playtime Chart -->
+                        <div class="stat-card chart-card">
+                            <div class="stat-header">
+                                <i class="stat-icon">📊</i>
+                                <h3>Weekly Playtime</h3>
+                            </div>
+                            <div class="stat-content">
+                                <div class="chart-container">
+                                    <div class="chart-bars" id="weeklyChart">
+                                        <!-- Bars will be generated by JavaScript -->
+                                    </div>
+                                    <div class="chart-labels">
+                                        <span>Mon</span>
+                                        <span>Tue</span>
+                                        <span>Wed</span>
+                                        <span>Thu</span>
+                                        <span>Fri</span>
+                                        <span>Sat</span>
+                                        <span>Sun</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Recent Sessions -->
+                        <div class="stat-card sessions-card">
+                            <div class="stat-header">
+                                <i class="stat-icon">🕒</i>
+                                <h3>Recent Sessions</h3>
+                            </div>
+                            <div class="stat-content">
+                                <div class="sessions-list" id="recentSessions">
+                                    <!-- Sessions will be populated by JavaScript -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stats-actions">
+                        <button class="btn secondary" id="refreshStats">🔄 Refresh</button>
+                        <button class="btn secondary" id="exportStats">📤 Export Data</button>
+                        <button class="btn danger" id="clearStats">🗑️ Clear Statistics</button>
+                    </div>
+                </div>
+            </div>
+
             <!-- About Screen -->
             <div id="aboutScreen" class="screen">
                 <div class="page-header">
@@ -736,6 +980,59 @@
                 </div>
             </div>
         </main>
+    </div>
+
+    <!-- Create Instance Modal -->
+    <div id="createInstanceModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Create New Instance</h2>
+                <button class="modal-close" onclick="closeCreateInstanceModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="createInstanceForm">
+                    <div class="form-group">
+                        <label for="instanceName">Instance Name</label>
+                        <input type="text" id="instanceName" placeholder="My Modpack" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="instanceVersion">Minecraft Version</label>
+                        <select id="instanceVersion" required>
+                            <option value="">Select a version...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="instanceModLoader">Mod Loader</label>
+                        <select id="instanceModLoader" required>
+                            <option value="vanilla">Vanilla</option>
+                            <option value="fabric">Fabric</option>
+                            <option value="neoforge">NeoForge</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="instanceDescription">Description (Optional)</label>
+                        <textarea id="instanceDescription" placeholder="Describe your instance..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="instanceIcon">Instance Icon</label>
+                        <div class="icon-selector">
+                            <div class="icon-option selected" data-icon="🎯">🎯</div>
+                            <div class="icon-option" data-icon="⚡">⚡</div>
+                            <div class="icon-option" data-icon="🔥">🔥</div>
+                            <div class="icon-option" data-icon="💎">💎</div>
+                            <div class="icon-option" data-icon="🚀">🚀</div>
+                            <div class="icon-option" data-icon="🎮">🎮</div>
+                            <div class="icon-option" data-icon="🛡️">🛡️</div>
+                            <div class="icon-option" data-icon="⭐">⭐</div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="secondary-btn" onclick="closeCreateInstanceModal()">Cancel</button>
+                <button type="submit" form="createInstanceForm" class="primary-btn">Create Instance</button>
+            </div>
+        </div>
     </div>
 
     <script src="app.js"></script>

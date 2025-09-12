@@ -47,5 +47,31 @@ contextBridge.exposeInMainWorld('electronAPI', {
     quitAndInstall: () => ipcRenderer.invoke('updater:quitAndInstall'),
     onUpdateAvailable: (callback) => ipcRenderer.on('updater:update-available', callback),
     onUpdateDownloaded: (callback) => ipcRenderer.on('updater:update-downloaded', callback)
+  },
+
+  // Settings management
+  settings: {
+    get: (key) => ipcRenderer.invoke('settings:get', key),
+    set: (key, value) => ipcRenderer.invoke('settings:set', key, value),
+    getAll: () => ipcRenderer.invoke('settings:getAll'),
+    reset: () => ipcRenderer.invoke('settings:reset')
+  },
+
+  // Playtime tracking
+  playtime: {
+    getStats: () => ipcRenderer.invoke('playtime:getStats'),
+    getSessionHistory: (limit) => ipcRenderer.invoke('playtime:getSessionHistory', limit),
+    getDailyStats: (days) => ipcRenderer.invoke('playtime:getDailyStats', days),
+    getWeeklyStats: (weeks) => ipcRenderer.invoke('playtime:getWeeklyStats', weeks)
+  },
+
+  // Dialog methods for cape management
+  dialog: {
+    showOpenDialog: (options) => ipcRenderer.invoke('dialog:showOpenDialog', options)
+  },
+
+  // File system methods for cape management
+  fs: {
+    readFile: (filePath, options) => ipcRenderer.invoke('fs:readFile', filePath, options)
   }
 });
