@@ -44,7 +44,6 @@ YNG Client is a sleek, modern Minecraft launcher built with Electron and Node.js
 - **macOS** ⏳ Maybe in the future (but Mac is the worst OS 😉)
 
 ## 🚀 Quick Start
-## 🚀 Quick Start
 
 ### Prerequisites
 - Node.js 18+ 
