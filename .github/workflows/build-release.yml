@@ -34,11 +34,18 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
-      - name: Debug build output
+      - name: Debug build output (Windows)
+        if: matrix.os == 'windows-latest'
         run: |
           echo "Checking dist directory..."
           dir dist
         shell: cmd
+
+      - name: Debug build output (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          echo "Checking dist directory..."
+          ls -la dist
 
       - name: Upload Windows artifacts
         if: matrix.os == 'windows-latest'
